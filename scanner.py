@@ -1,4 +1,5 @@
 import csv, json, re, sys, time, urllib.request
+import http.client, socket, urllib.error
 from datetime import datetime, date
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -24,8 +25,27 @@ def norm_date(raw):
  if len(s)==6: return f'{int(s[:2])+1911:04d}-{s[2:4]}-{s[4:6]}'
  raise ValueError(f'Unrecognized date: {raw}')
 def download(market):
- req=urllib.request.Request(URLS[market],headers={'User-Agent':'Mozilla/5.0 (educational market research)','Accept':'application/json'})
- with urllib.request.urlopen(req,timeout=45) as r: payload=json.load(r)
+ # Re-create the connection for every attempt: an incomplete HTTP response
+ # must never be reused. Retry transient network errors and truncated JSON.
+ payload=None
+ for attempt in range(1,5):
+  req=urllib.request.Request(URLS[market],headers={
+   'User-Agent':'Mozilla/5.0', 'Accept':'application/json',
+   'Accept-Encoding':'identity', 'Connection':'close',
+   'Cache-Control':'no-cache'})
+  try:
+   with urllib.request.urlopen(req,timeout=90) as response:
+    raw=response.read()
+   payload=json.loads(raw.decode('utf-8-sig'))
+   break
+  except (http.client.IncompleteRead, http.client.RemoteDisconnected,
+          urllib.error.URLError, TimeoutError, socket.timeout,
+          ConnectionError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+   print(f'{market}: download attempt {attempt}/4 failed: {type(exc).__name__}: {exc}',
+         file=sys.stderr,flush=True)
+   if attempt==4:
+    raise RuntimeError(f'{market} download failed after 4 attempts: {exc}') from exc
+   time.sleep(min(3*attempt,9))
  if not isinstance(payload,list) or not payload:raise ValueError(f'{market} returned empty/non-list payload')
  out=[]
  for r in payload:
