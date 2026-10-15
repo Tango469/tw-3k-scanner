@@ -233,7 +233,9 @@ def scan(rows):
                                 fail=round(middle['low'], 2),
                                 volume_ratio=round(ratio, 2) if ratio is not None else '',
                                 ma20=round(ma20, 2) if ma20 is not None else '',
-                                history_days=i+1))
+                                history_days=i+1,
+                                volume=right['volume'],
+                                turnover=round(right['close'] * right['volume'], 2)))
     return signals, groups
 
 
