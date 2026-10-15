@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.2. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.3.2. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -177,6 +177,35 @@ def history_tpex(day):
     return history_table(payload, 'TPEX', day)
 
 
+def refresh_twse_current_session(indexed, today, errors):
+    """Prefer official TWSE dated historical endpoint when OpenAPI lags.
+
+    Only check on/after 16:00 Taiwan time, on weekdays; never replace valid
+    latest records with an empty or unverified historical response.
+    """
+    now = dt.datetime.now(ZoneInfo('Asia/Taipei'))
+    if today.weekday() >= 5 or now.hour < 16:
+        print('TWSE freshness: current-session check deferred (weekend / before 16:00)')
+        return
+    day_str = today.isoformat()
+    known_today = sum(1 for key in indexed if key[0] == day_str and key[1] == 'TWSE')
+    if known_today >= 100:
+        print(f'TWSE freshness: current session {day_str} already present ({known_today} stocks)')
+        return
+    try:
+        records, status = history_twse(today)
+        if status != 'ok' or len(records) < 100:
+            print(f'TWSE freshness: {day_str} not yet available (status={status})')
+            return
+        for row in records:
+            indexed[(row['date'], row['market'], row['code'])] = row
+        print(f'TWSE freshness: recovered {day_str} from dated MI_INDEX, {len(records)} stocks')
+    except Exception as exc:
+        msg = f'TWSE current-session fallback {day_str}: {exc}'
+        errors.append(msg)
+        print(msg, file=sys.stderr)
+
+
 def read_rows():
     if not DB.exists():
         return []
@@ -301,7 +330,7 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
     warnings = '; '.join(errors[:12]) if errors else '無'
     if len(errors) > 12:
         warnings += f'；另有 {len(errors)-12} 項'
-    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
+    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3.2</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
     (DOC/'index.html').write_text(page, encoding='utf-8')
     print(f'Latest by market={latest_by_market}; rows={len(rows)}; qualified={len(qualified)}; watch={len(watch)}; coverage={coverage}; errors={len(errors)}')
 
@@ -333,6 +362,8 @@ def main(argv=None):
             except Exception as exc:
                 errors.append(f'{market} latest: {exc}')
                 print(errors[-1], file=sys.stderr)
+    if not args.skip_latest:
+        refresh_twse_current_session(indexed, today, errors)
     # Backfill oldest missing weekdays first, retaining only confirmed successful
     # dates. Failed requests are retried on later runs, not marked as done.
     state_path = ROOT/'data'/'backfill_state.json'
