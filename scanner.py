@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.2. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -110,71 +110,71 @@ def latest_market(market):
     return result
 
 
-def history_twse(day):
-    """TWSE all-stock historical daily quotes. Match headers, not table numbers."""
-    query = urllib.parse.urlencode({'response': 'json', 'date': day.strftime('%Y%m%d'), 'type': 'ALLBUT0999'})
-    url = 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?' + query
-    payload = fetch_json(url, attempts=3)
+def history_table(payload, market, day):
+    """Parse official historical tables by normalized field names, never table positions."""
     if not isinstance(payload, dict):
-        raise ValueError(f'TWSE unexpected response type {type(payload).__name__}')
-    status = str(payload.get('stat', ''))
+        raise ValueError(f'{market}: unexpected payload type')
+    tables = payload.get('tables')
+    if not isinstance(tables, list):
+        raise ValueError(f'{market}: missing tables; keys={list(payload)}')
+    aliases = {
+        'code': ('證券代號', '代號'),
+        'name': ('證券名稱', '名稱'),
+        'open': ('開盤價', '開盤'),
+        'high': ('最高價', '最高'),
+        'low': ('最低價', '最低'),
+        'close': ('收盤價', '收盤'),
+        'volume': ('成交股數',),
+    }
+    candidates = []
+    for table in tables:
+        if not isinstance(table, dict) or not isinstance(table.get('fields'), list):
+            continue
+        names = [re.sub(r'<[^>]*>', '', str(x)).replace('　', '').strip() for x in table['fields']]
+        indices = {}
+        for key, choices in aliases.items():
+            indices[key] = next((names.index(alias) for alias in choices if alias in names), None)
+        if any(v is None for v in indices.values()):
+            continue
+        records = table.get('data', [])
+        if not isinstance(records, list):
+            continue
+        parsed = []
+        for cells in records:
+            if not isinstance(cells, list) or len(cells) <= max(indices.values()):
+                continue
+            row = make_row(day.isoformat(), market, *(
+                cells[indices[k]] for k in ('code', 'name', 'open', 'high', 'low', 'close', 'volume')
+            ))
+            if row:
+                parsed.append(row)
+        candidates.append((len(parsed), parsed, names))
+    if not candidates:
+        raise ValueError(f'{market}: no recognized stock table; tables={len(tables)}')
+    count, rows, names = max(candidates, key=lambda x: x[0])
+    if count < 100:
+        raise ValueError(f'{market}: parsed only {count} stock rows; headers={names}')
+    return rows, 'ok'
+
+
+def history_twse(day):
+    query = urllib.parse.urlencode({'response': 'json', 'date': day.strftime('%Y%m%d'), 'type': 'ALLBUT0999'})
+    payload = fetch_json('https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?' + query, attempts=3)
+    status = str(payload.get('stat', '')) if isinstance(payload, dict) else ''
     if status != 'OK':
         if any(x in status for x in ('沒有符合條件', '查無資料', '很抱歉', '休市')):
             return [], 'no-session'
         raise ValueError(f'TWSE status {status!r}')
-    for key, headers in payload.items():
-        if not re.fullmatch(r'fields\d+', key) or not isinstance(headers, list):
-            continue
-        names = [re.sub(r'<[^>]+>', '', str(h)).strip() for h in headers]
-        idx = {v: i for i, v in enumerate(names)}
-        required = ('證券代號', '證券名稱', '成交股數', '開盤價', '最高價', '最低價', '收盤價')
-        if not all(k in idx for k in required):
-            continue
-        out = []
-        for cells in payload.get(key.replace('fields', 'data'), []):
-            if not isinstance(cells, list) or len(cells) <= max(idx.values()):
-                continue
-            # Correct mapping: open/high/low/close BEFORE volume.
-            row = make_row(day.isoformat(), 'TWSE', cells[idx['證券代號']],
-                           cells[idx['證券名稱']], cells[idx['開盤價']],
-                           cells[idx['最高價']], cells[idx['最低價']],
-                           cells[idx['收盤價']], cells[idx['成交股數']])
-            if row:
-                out.append(row)
-        if len(out) >= 100:
-            return out, 'ok'
-        raise ValueError(f'TWSE quote table found but parsed only {len(out)} rows; headers={names!r}')
-    raise ValueError('TWSE status OK but no recognized all-stock quote table; keys=' + ','.join(payload.keys()))
+    return history_table(payload, 'TWSE', day)
 
 
 def history_tpex(day):
-    """TPEx official historical daily quotes; fail loudly on schema changes."""
     roc = f'{day.year - 1911:03d}/{day.month:02d}/{day.day:02d}'
     query = urllib.parse.urlencode({'l': 'zh-tw', 'd': roc, 'se': 'EW'})
-    url = 'https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?' + query
-    payload = fetch_json(url, attempts=3)
-    if not isinstance(payload, dict):
-        raise ValueError(f'TPEx unexpected response type {type(payload).__name__}')
-    rows = payload.get('aaData')
-    if rows is None:
-        raise ValueError('TPEx missing aaData; keys=' + ','.join(payload.keys()))
-    if not isinstance(rows, list):
-        raise ValueError('TPEx aaData is not a list')
-    if not rows:
-        # Only accept a zero-row result as a no-session if explicitly identified.
-        # A broken/retired endpoint often returns an empty list for ALL dates.
-        raise ValueError('TPEx empty aaData; cannot distinguish holiday from endpoint failure')
-    out = []
-    for cells in rows:
-        if not isinstance(cells, list) or len(cells) < 9:
-            continue
-        row = make_row(day.isoformat(), 'TPEX', cells[0], cells[1],
-                       cells[4], cells[5], cells[6], cells[2], cells[8])
-        if row:
-            out.append(row)
-    if len(out) < 100:
-        raise ValueError(f'TPEx parsed only {len(out)} of {len(rows)} rows; sample={str(rows[0])[:250]}')
-    return out, 'ok'
+    payload = fetch_json('https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?' + query, attempts=3)
+    if isinstance(payload, dict) and str(payload.get('stat', '')).lower() in ('休市', '查無資料'):
+        return [], 'no-session'
+    return history_table(payload, 'TPEX', day)
 
 
 def read_rows():
@@ -278,7 +278,7 @@ def publish(rows, signals, stats, errors, coverage):
                    for s in current[:150])
     market_counts = ', '.join(f'{m}: {n} 日' for m, n in coverage.items())
     warnings = '; '.join(errors) if errors else '無'
-    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:950px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2</h1><div class="box"><b>資料最新日期：{html.escape(latest)}</b><p>候選 {len(current)} 檔｜累積交易日 {len(dates)} 天｜各市場覆蓋：{html.escape(market_counts)}</p><p>歷史回補逐批進行；未滿 20 日的個股，其 MA20 與量能評分可能不完整。</p><p><a href="latest.csv">今日排名</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>資料下載警告：{html.escape(warnings)}</p><p>A：中間 K 高低點均低於兩側；B：中間 K 低點低於兩側但不符合 A。評分為研究用途，非經驗證勝率。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 為左右 K 高點較高者；fail 為中間 K 低點。回測為未含成本的未來收盤價報酬，不代表可成交策略績效。</p></html>'''
+    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:950px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.2</h1><div class="box"><b>資料最新日期：{html.escape(latest)}</b><p>候選 {len(current)} 檔｜累積交易日 {len(dates)} 天｜各市場覆蓋：{html.escape(market_counts)}</p><p>歷史回補逐批進行；未滿 20 日的個股，其 MA20 與量能評分可能不完整。</p><p><a href="latest.csv">今日排名</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>資料下載警告：{html.escape(warnings)}</p><p>A：中間 K 高低點均低於兩側；B：中間 K 低點低於兩側但不符合 A。評分為研究用途，非經驗證勝率。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 為左右 K 高點較高者；fail 為中間 K 低點。回測為未含成本的未來收盤價報酬，不代表可成交策略績效。</p></html>'''
     (DOC/'index.html').write_text(page, encoding='utf-8')
     print(f'Latest={latest}; rows={len(rows)}; candidates={len(current)}; coverage={coverage}; errors={errors}')
 
