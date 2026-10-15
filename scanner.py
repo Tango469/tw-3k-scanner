@@ -261,26 +261,47 @@ def csv_report(path, records, cols):
         writer.writerows(records)
 
 
-def publish(rows, signals, stats, errors, coverage):
+def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turnover=2000000):
+    """Publish market-specific latest sessions; incomplete and illiquid signals separately."""
     DOC.mkdir(parents=True, exist_ok=True)
-    dates = sorted({r['date'] for r in rows})
-    latest = dates[-1] if dates else '無資料'
-    current = sorted((s for s in signals if s['date'] == latest),
-                     key=lambda s: (-s['score'], s['market'], s['code']))
+    latest_by_market = {
+        m: max((r['date'] for r in rows if r['market'] == m), default='')
+        for m in LATEST
+    }
+    latest = max(latest_by_market.values(), default='')
+    market_signals = [s for s in signals if s['date'] == latest_by_market.get(s['market'])]
+    qualified, watch = [], []
+    for signal in market_signals:
+        if signal['history_days'] < 20:
+            signal['status'] = '歷史不足20日'
+            watch.append(signal)
+        elif signal['volume'] < min_volume or signal['turnover'] < min_turnover:
+            signal['status'] = '流動性不足'
+            watch.append(signal)
+        else:
+            signal['status'] = '符合初篩'
+            qualified.append(signal)
+    ordering = lambda s: (-s['score'], s['market'], s['code'])
+    qualified.sort(key=ordering)
+    watch.sort(key=ordering)
     cols = ['date','market','code','name','type','score','close','trigger','fail',
-            'volume_ratio','ma20','history_days']
-    csv_report(DOC/'latest.csv', current, cols)
+            'volume_ratio','ma20','history_days','volume','turnover','status']
+    csv_report(DOC/'latest.csv', qualified, cols)
+    csv_report(DOC/'watch.csv', watch, cols)
     csv_report(DOC/'signals.csv', signals, cols)
     csv_report(DOC/'backtest.csv', stats,
                ['type','days','samples','avg_return_pct','positive_pct'])
     headers = ''.join(f'<th>{html.escape(c)}</th>' for c in cols)
-    body = ''.join('<tr>'+''.join(f'<td>{html.escape(str(s.get(c,"")))}</td>' for c in cols)+'</tr>'
-                   for s in current[:150])
-    market_counts = ', '.join(f'{m}: {n} 日' for m, n in coverage.items())
-    warnings = '; '.join(errors) if errors else '無'
-    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:950px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.2</h1><div class="box"><b>資料最新日期：{html.escape(latest)}</b><p>候選 {len(current)} 檔｜累積交易日 {len(dates)} 天｜各市場覆蓋：{html.escape(market_counts)}</p><p>歷史回補逐批進行；未滿 20 日的個股，其 MA20 與量能評分可能不完整。</p><p><a href="latest.csv">今日排名</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>資料下載警告：{html.escape(warnings)}</p><p>A：中間 K 高低點均低於兩側；B：中間 K 低點低於兩側但不符合 A。評分為研究用途，非經驗證勝率。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 為左右 K 高點較高者；fail 為中間 K 低點。回測為未含成本的未來收盤價報酬，不代表可成交策略績效。</p></html>'''
+    body = ''.join('<tr>'+''.join(f'<td>{html.escape(str(sig.get(c,"")))}</td>' for c in cols)+'</tr>'
+                   for sig in qualified[:150])
+    coverage_text = ', '.join(f'{m}: {n} 日' for m,n in coverage.items())
+    dates_text = ', '.join(f'{m}: {latest_by_market[m] or "無資料"}' for m in LATEST)
+    warnings = '; '.join(errors[:12]) if errors else '無'
+    if len(errors) > 12:
+        warnings += f'；另有 {len(errors)-12} 項'
+    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
     (DOC/'index.html').write_text(page, encoding='utf-8')
-    print(f'Latest={latest}; rows={len(rows)}; candidates={len(current)}; coverage={coverage}; errors={errors}')
+    print(f'Latest by market={latest_by_market}; rows={len(rows)}; qualified={len(qualified)}; watch={len(watch)}; coverage={coverage}; errors={len(errors)}')
 
 
 def main(argv=None):
@@ -290,6 +311,8 @@ def main(argv=None):
     parser.add_argument('--batch-size', type=int, default=12,
                         help='Historical calendar dates to attempt per run (safe for GitHub Actions)')
     parser.add_argument('--skip-latest', action='store_true')
+    parser.add_argument('--min-volume', type=float, default=100000, help='Minimum daily traded shares')
+    parser.add_argument('--min-turnover', type=float, default=2000000, help='Estimated NT$ traded value')
     args = parser.parse_args(argv)
     old = read_rows()
     indexed = {(r['date'],r['market'],r['code']):r for r in old}
@@ -359,7 +382,7 @@ def main(argv=None):
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding='utf-8')
     signals, groups = scan(rows)
     coverage = {m: len({r['date'] for r in rows if r['market'] == m}) for m in LATEST}
-    publish(rows, signals, backtest(signals, groups), errors, coverage)
+    publish(rows, signals, backtest(signals, groups), errors, coverage, args.min_volume, args.min_turnover)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
