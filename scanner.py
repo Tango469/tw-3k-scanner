@@ -6,6 +6,7 @@ import html
 import http.client
 import json
 import re
+import os
 import socket
 import sys
 import time
@@ -110,56 +111,70 @@ def latest_market(market):
 
 
 def history_twse(day):
+    """TWSE all-stock historical daily quotes. Match headers, not table numbers."""
     query = urllib.parse.urlencode({'response': 'json', 'date': day.strftime('%Y%m%d'), 'type': 'ALLBUT0999'})
-    payload = fetch_json('https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?' + query, attempts=2)
-    if not isinstance(payload, dict) or payload.get('stat') != 'OK':
-        return []
-    # Data-table numbering varies by date: find matching field names instead.
-    result = []
+    url = 'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?' + query
+    payload = fetch_json(url, attempts=3)
+    if not isinstance(payload, dict):
+        raise ValueError(f'TWSE unexpected response type {type(payload).__name__}')
+    status = str(payload.get('stat', ''))
+    if status != 'OK':
+        if any(x in status for x in ('沒有符合條件', '查無資料', '很抱歉', '休市')):
+            return [], 'no-session'
+        raise ValueError(f'TWSE status {status!r}')
     for key, headers in payload.items():
-        if not re.fullmatch(r'fields\d+', key):
+        if not re.fullmatch(r'fields\d+', key) or not isinstance(headers, list):
             continue
-        if not isinstance(headers, list):
-            continue
-        idx = {str(v).strip(): i for i, v in enumerate(headers)}
-        required = ['證券代號', '證券名稱', '成交股數', '開盤價', '最高價', '最低價', '收盤價']
+        names = [re.sub(r'<[^>]+>', '', str(h)).strip() for h in headers]
+        idx = {v: i for i, v in enumerate(names)}
+        required = ('證券代號', '證券名稱', '成交股數', '開盤價', '最高價', '最低價', '收盤價')
         if not all(k in idx for k in required):
             continue
-        data_key = key.replace('fields', 'data')
-        for cells in payload.get(data_key, []):
+        out = []
+        for cells in payload.get(key.replace('fields', 'data'), []):
             if not isinstance(cells, list) or len(cells) <= max(idx.values()):
                 continue
-            row = make_row(day.isoformat(), 'TWSE', *(cells[idx[k]] for k in required))
+            # Correct mapping: open/high/low/close BEFORE volume.
+            row = make_row(day.isoformat(), 'TWSE', cells[idx['證券代號']],
+                           cells[idx['證券名稱']], cells[idx['開盤價']],
+                           cells[idx['最高價']], cells[idx['最低價']],
+                           cells[idx['收盤價']], cells[idx['成交股數']])
             if row:
-                result.append(row)
-        if result:
-            break
-    return result
+                out.append(row)
+        if len(out) >= 100:
+            return out, 'ok'
+        raise ValueError(f'TWSE quote table found but parsed only {len(out)} rows; headers={names!r}')
+    raise ValueError('TWSE status OK but no recognized all-stock quote table; keys=' + ','.join(payload.keys()))
 
 
 def history_tpex(day):
+    """TPEx official historical daily quotes; fail loudly on schema changes."""
     roc = f'{day.year - 1911:03d}/{day.month:02d}/{day.day:02d}'
     query = urllib.parse.urlencode({'l': 'zh-tw', 'd': roc, 'se': 'EW'})
     url = 'https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_result.php?' + query
-    payload = fetch_json(url, attempts=2)
+    payload = fetch_json(url, attempts=3)
     if not isinstance(payload, dict):
-        return []
-    # Official historical quotes: aaData columns typically:
-    # code, name, close, change, open, high, low, average, volume(lots), ...
-    # Use schema/header matching when available; fall back to published layout.
-    rows = payload.get('aaData', [])
+        raise ValueError(f'TPEx unexpected response type {type(payload).__name__}')
+    rows = payload.get('aaData')
+    if rows is None:
+        raise ValueError('TPEx missing aaData; keys=' + ','.join(payload.keys()))
     if not isinstance(rows, list):
-        return []
-    result = []
+        raise ValueError('TPEx aaData is not a list')
+    if not rows:
+        # Only accept a zero-row result as a no-session if explicitly identified.
+        # A broken/retired endpoint often returns an empty list for ALL dates.
+        raise ValueError('TPEx empty aaData; cannot distinguish holiday from endpoint failure')
+    out = []
     for cells in rows:
         if not isinstance(cells, list) or len(cells) < 9:
             continue
-        # TPEx historical 成交股數 is commonly index 8 (shares) or lots,
-        # depending on endpoint version. Do not silently multiply uncertain units.
-        row = make_row(day.isoformat(), 'TPEX', cells[0], cells[1], cells[4], cells[5], cells[6], cells[2], cells[8])
+        row = make_row(day.isoformat(), 'TPEX', cells[0], cells[1],
+                       cells[4], cells[5], cells[6], cells[2], cells[8])
         if row:
-            result.append(row)
-    return result
+            out.append(row)
+    if len(out) < 100:
+        raise ValueError(f'TPEx parsed only {len(out)} of {len(rows)} rows; sample={str(rows[0])[:250]}')
+    return out, 'ok'
 
 
 def read_rows():
@@ -293,41 +308,50 @@ def main(argv=None):
             except Exception as exc:
                 errors.append(f'{market} latest: {exc}')
                 print(errors[-1], file=sys.stderr)
-    # Keep a durable record of already attempted dates, including market holidays.
+    # Backfill oldest missing weekdays first, retaining only confirmed successful
+    # dates. Failed requests are retried on later runs, not marked as done.
     state_path = ROOT/'data'/'backfill_state.json'
     try:
         state = json.loads(state_path.read_text(encoding='utf-8'))
     except (OSError, ValueError):
-        state = {'TWSE': [], 'TPEX': []}
+        state = {}
     for market in LATEST:
-        done = set(state.get(market, []))
         known = {k[0] for k in indexed if k[1] == market}
-        cursor = today - dt.timedelta(days=1)
+        no_sessions = set(state.get(market, {}).get('no_sessions', [])) if isinstance(state.get(market), dict) else set()
+        # Existing V2 state lists are discarded: they marked 0-row failures done.
+        end = today - dt.timedelta(days=1)
+        start = end - dt.timedelta(days=max(200, int(args.backfill_days * 1.8)))
+        dates = [start + dt.timedelta(days=i) for i in range((end-start).days + 1)]
+        dates.reverse()  # newest missing dates first, then progressively older
         processed = 0
-        # ~2 years upper limit; stop when target sessions exist.
-        while processed < max(0,args.batch_size) and cursor >= today - dt.timedelta(days=730):
-            date_text = cursor.isoformat()
-            cursor -= dt.timedelta(days=1)
-            if len(known) >= args.backfill_days:
+        successes = 0
+        for day in dates:
+            if len(known) >= args.backfill_days or processed >= max(0, args.batch_size):
                 break
-            if date_text in done or date_text in known or dt.date.fromisoformat(date_text).weekday() >= 5:
+            key = day.isoformat()
+            if day.weekday() >= 5 or key in known or key in no_sessions:
                 continue
+            processed += 1
             try:
-                records = history_twse(dt.date.fromisoformat(date_text)) if market == 'TWSE' else history_tpex(dt.date.fromisoformat(date_text))
-                if records and len(records) < 100:
-                    raise ValueError(f'only {len(records)} usable rows; not marking date complete')
+                records, status = history_twse(day) if market == 'TWSE' else history_tpex(day)
+                if status == 'no-session':
+                    no_sessions.add(key)
+                    print(f'{market} history {key}: confirmed no session')
+                    continue
+                if len(records) < 100:
+                    raise ValueError(f'only {len(records)} valid rows')
                 for row in records:
                     indexed[(row['date'], row['market'], row['code'])] = row
-                if records:
-                    known.add(date_text)
-                done.add(date_text)
-                print(f'{market} history {date_text}: {len(records)} rows')
+                known.add(key)
+                successes += 1
+                print(f'{market} history {key}: {len(records)} rows')
             except Exception as exc:
-                errors.append(f'{market} history {date_text}: {exc}')
-                print(errors[-1], file=sys.stderr)
-            processed += 1
-            time.sleep(0.7)
-        state[market] = sorted(done)
+                message = f'{market} history {key}: {exc}'
+                errors.append(message)
+                print(message, file=sys.stderr)
+            time.sleep(0.5)
+        state[market] = {'no_sessions': sorted(no_sessions)}
+        print(f'{market} history batch: attempted={processed}; added_sessions={successes}; coverage={len(known)}')
     rows = sorted(indexed.values(), key=lambda r: (r['date'],r['market'],r['code']))
     if not rows:
         raise SystemExit('No valid data; refusing to publish')
@@ -338,6 +362,8 @@ def main(argv=None):
     publish(rows, signals, backtest(signals, groups), errors, coverage)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
+    if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
+        print('WARNING: insufficient history for any 3K signals', file=sys.stderr)
 
 if __name__ == '__main__':
     main()
