@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.3.3. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.3.4. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -351,7 +351,7 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
     warnings = '; '.join(errors[:12]) if errors else '無'
     if len(errors) > 12:
         warnings += f'；另有 {len(errors)-12} 項'
-    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3.3</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="audit.csv">篩選稽核</a> · <a href="signal_validation.csv">三K驗證</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
+    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3.4</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="audit.csv">篩選稽核</a> · <a href="signal_validation.csv">三K驗證</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
     (DOC/'index.html').write_text(page, encoding='utf-8')
     print(f'Selection audit={audit}')
     print(f'Latest by market={latest_by_market}; rows={len(rows)}; qualified={len(qualified)}; watch={len(watch)}; coverage={coverage}; errors={len(errors)}')
@@ -361,8 +361,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--backfill-days', type=int, default=120,
                         help='Target historical trading sessions per market')
-    parser.add_argument('--batch-size', type=int, default=12,
-                        help='Historical calendar dates to attempt per run (safe for GitHub Actions)')
+    parser.add_argument('--batch-size', type=int, default=100,
+                        help='Maximum missing historical dates to attempt per market per run')
+    parser.add_argument('--max-backfill-seconds', type=int, default=540,
+                        help='Total historical backfill time budget in seconds (default 9 minutes)')
+    parser.add_argument('--request-pause', type=float, default=0.8,
+                        help='Delay between historical API requests in seconds')
     parser.add_argument('--skip-latest', action='store_true')
     parser.add_argument('--min-volume', type=float, default=100000, help='Minimum daily traded shares')
     parser.add_argument('--min-turnover', type=float, default=2000000, help='Estimated NT$ traded value')
@@ -393,6 +397,8 @@ def main(argv=None):
         state = json.loads(state_path.read_text(encoding='utf-8'))
     except (OSError, ValueError):
         state = {}
+    backfill_started = time.monotonic()
+    deadline = backfill_started + max(0, args.max_backfill_seconds)
     for market in LATEST:
         known = {k[0] for k in indexed if k[1] == market}
         market_state = state.get(market, {}) if isinstance(state.get(market), dict) else {}
@@ -401,13 +407,21 @@ def main(argv=None):
         run_number = int(market_state.get('run_number', 0)) + 1
         # Existing V2 state lists are discarded: they marked 0-row failures done.
         end = today - dt.timedelta(days=1)
-        start = end - dt.timedelta(days=max(200, int(args.backfill_days * 1.8)))
+        start = end - dt.timedelta(days=max(240, int(args.backfill_days * 2.1)))
         dates = [start + dt.timedelta(days=i) for i in range((end-start).days + 1)]
         dates.reverse()  # newest missing dates first, then progressively older
         processed = 0
         successes = 0
+        stop_reason = 'date range exhausted'
         for day in dates:
-            if len(known) >= args.backfill_days or processed >= max(0, args.batch_size):
+            if len(known) >= args.backfill_days:
+                stop_reason = 'target reached'
+                break
+            if processed >= max(0, args.batch_size):
+                stop_reason = 'batch limit reached'
+                break
+            if time.monotonic() >= deadline:
+                stop_reason = 'time budget reached'
                 break
             key = day.isoformat()
             if day.weekday() >= 5 or key in known or key in no_sessions:
@@ -436,10 +450,14 @@ def main(argv=None):
                 errors.append(message)
                 failures[key] = int(failures.get(key, 0)) + 1
                 print(message, file=sys.stderr)
-            time.sleep(0.5)
+            if time.monotonic() < deadline:
+                time.sleep(max(0.0, args.request_pause))
+        if len(known) >= args.backfill_days:
+            stop_reason = 'target reached'
         state[market] = {'no_sessions': sorted(no_sessions), 'failures': failures,
                          'run_number': run_number}
-        print(f'{market} history batch: attempted={processed}; added_sessions={successes}; coverage={len(known)}')
+        print(f'{market} history batch: attempted={processed}; added_sessions={successes}; coverage={len(known)}/{args.backfill_days}; stop={stop_reason}')
+    print(f'Backfill elapsed={time.monotonic() - backfill_started:.1f}s; budget={args.max_backfill_seconds}s')
     rows = sorted(indexed.values(), key=lambda r: (r['date'],r['market'],r['code']))
     if not rows:
         raise SystemExit('No valid data; refusing to publish')
