@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.3.2. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.3.3. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -264,7 +264,10 @@ def scan(rows):
                                 ma20=round(ma20, 2) if ma20 is not None else '',
                                 history_days=i+1,
                                 volume=right['volume'],
-                                turnover=round(right['close'] * right['volume'], 2)))
+                                turnover=round(right['close'] * right['volume'], 2),
+                                left_date=left['date'], left_high=left['high'], left_low=left['low'],
+                                middle_date=middle['date'], middle_high=middle['high'], middle_low=middle['low'],
+                                right_date=right['date'], right_high=right['high'], right_low=right['low']))
     return signals, groups
 
 
@@ -302,6 +305,18 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
     latest = max(latest_by_market.values(), default='')
     market_signals = [s for s in signals if s['date'] == latest_by_market.get(s['market'])]
     qualified, watch = [], []
+    audit = []
+    for market in LATEST:
+        selected = [s for s in market_signals if s['market'] == market]
+        audit.append(dict(market=market, latest_date=latest_by_market[market],
+                          raw_signals=len(selected), history_short=sum(s['history_days'] < 20 for s in selected),
+                          low_liquidity=sum(s['history_days'] >= 20 and
+                                            (s['volume'] < min_volume or s['turnover'] < min_turnover)
+                                            for s in selected),
+                          qualified=sum(s['history_days'] >= 20 and s['volume'] >= min_volume and
+                                        s['turnover'] >= min_turnover for s in selected),
+                          a_signals=sum(s['type'] == 'A' for s in selected),
+                          b_signals=sum(s['type'] == 'B' for s in selected)))
     for signal in market_signals:
         if signal['history_days'] < 20:
             signal['status'] = '歷史不足20日'
@@ -319,6 +334,12 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
             'volume_ratio','ma20','history_days','volume','turnover','status']
     csv_report(DOC/'latest.csv', qualified, cols)
     csv_report(DOC/'watch.csv', watch, cols)
+    audit_cols = ['market','latest_date','raw_signals','history_short','low_liquidity',
+                  'qualified','a_signals','b_signals']
+    csv_report(DOC/'audit.csv', audit, audit_cols)
+    ohlc_cols = ['left_date','left_high','left_low','middle_date','middle_high',
+                 'middle_low','right_date','right_high','right_low']
+    csv_report(DOC/'signal_validation.csv', market_signals, cols + ohlc_cols)
     csv_report(DOC/'signals.csv', signals, cols)
     csv_report(DOC/'backtest.csv', stats,
                ['type','days','samples','avg_return_pct','positive_pct'])
@@ -330,8 +351,9 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
     warnings = '; '.join(errors[:12]) if errors else '無'
     if len(errors) > 12:
         warnings += f'；另有 {len(errors)-12} 項'
-    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3.2</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
+    page = f'''<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>台股三K盤後掃描 V2.3</title><style>body{{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:20px;background:#f7f9fc;color:#16243a}}.box{{background:white;border-radius:12px;padding:16px;margin:14px 0}}.scroll{{overflow:auto}}table{{border-collapse:collapse;min-width:1100px;width:100%}}td,th{{padding:9px;border-bottom:1px solid #e1e5ea;text-align:left;font-size:13px}}th{{background:#e9eff6}}</style><h1>台股三 K 盤後掃描 V2.3.3</h1><div class="box"><b>各市場最新日期：{html.escape(dates_text)}</b><p>合格初篩 {len(qualified)} 檔｜觀察 {len(watch)} 檔｜覆蓋：{html.escape(coverage_text)}</p><p>初篩門檻：每檔至少20筆歷史日線、當日成交量 ≥ {min_volume:,} 股、以收盤價估算成交額 ≥ NT$ {min_turnover:,.0f}；不是買進建議。</p><p><a href="latest.csv">合格初篩</a> · <a href="watch.csv">資料不足／低流動性觀察</a> · <a href="audit.csv">篩選稽核</a> · <a href="signal_validation.csv">三K驗證</a> · <a href="signals.csv">歷史訊號</a> · <a href="backtest.csv">回測統計</a></p><p>下載警告：{html.escape(warnings)}</p><p>A：中間K高低點均低於兩側；B：中間K低點低於兩側但不符合A。</p></div><div class="box scroll"><table><thead><tr>{headers}</tr></thead><tbody>{body}</tbody></table></div><p>trigger 是突破觀察價，fail 是型態失效參考價。回測不含交易成本、流動性限制或實際成交模擬。</p></html>'''
     (DOC/'index.html').write_text(page, encoding='utf-8')
+    print(f'Selection audit={audit}')
     print(f'Latest by market={latest_by_market}; rows={len(rows)}; qualified={len(qualified)}; watch={len(watch)}; coverage={coverage}; errors={len(errors)}')
 
 
@@ -364,7 +386,7 @@ def main(argv=None):
                 print(errors[-1], file=sys.stderr)
     if not args.skip_latest:
         refresh_twse_current_session(indexed, today, errors)
-    # Backfill oldest missing weekdays first, retaining only confirmed successful
+    # Backfill newest missing weekdays first, retaining only confirmed successful
     # dates. Failed requests are retried on later runs, not marked as done.
     state_path = ROOT/'data'/'backfill_state.json'
     try:
@@ -373,7 +395,10 @@ def main(argv=None):
         state = {}
     for market in LATEST:
         known = {k[0] for k in indexed if k[1] == market}
-        no_sessions = set(state.get(market, {}).get('no_sessions', [])) if isinstance(state.get(market), dict) else set()
+        market_state = state.get(market, {}) if isinstance(state.get(market), dict) else {}
+        no_sessions = set(market_state.get('no_sessions', []))
+        failures = dict(market_state.get('failures', {}))
+        run_number = int(market_state.get('run_number', 0)) + 1
         # Existing V2 state lists are discarded: they marked 0-row failures done.
         end = today - dt.timedelta(days=1)
         start = end - dt.timedelta(days=max(200, int(args.backfill_days * 1.8)))
@@ -387,6 +412,10 @@ def main(argv=None):
             key = day.isoformat()
             if day.weekday() >= 5 or key in known or key in no_sessions:
                 continue
+            # Retry persistent malformed/empty historical responses every 7 runs,
+            # instead of consuming the 12-request budget on every run.
+            if failures.get(key, 0) >= 2 and run_number % 7 != 0:
+                continue
             processed += 1
             try:
                 records, status = history_twse(day) if market == 'TWSE' else history_tpex(day)
@@ -399,19 +428,23 @@ def main(argv=None):
                 for row in records:
                     indexed[(row['date'], row['market'], row['code'])] = row
                 known.add(key)
+                failures.pop(key, None)
                 successes += 1
                 print(f'{market} history {key}: {len(records)} rows')
             except Exception as exc:
                 message = f'{market} history {key}: {exc}'
                 errors.append(message)
+                failures[key] = int(failures.get(key, 0)) + 1
                 print(message, file=sys.stderr)
             time.sleep(0.5)
-        state[market] = {'no_sessions': sorted(no_sessions)}
+        state[market] = {'no_sessions': sorted(no_sessions), 'failures': failures,
+                         'run_number': run_number}
         print(f'{market} history batch: attempted={processed}; added_sessions={successes}; coverage={len(known)}')
     rows = sorted(indexed.values(), key=lambda r: (r['date'],r['market'],r['code']))
     if not rows:
         raise SystemExit('No valid data; refusing to publish')
     save_rows(rows)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding='utf-8')
     signals, groups = scan(rows)
     coverage = {m: len({r['date'] for r in rows if r['market'] == m}) for m in LATEST}
