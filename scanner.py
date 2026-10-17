@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.3.4. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.4.0. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -357,6 +357,112 @@ def publish(rows, signals, stats, errors, coverage, min_volume=100000, min_turno
     print(f'Latest by market={latest_by_market}; rows={len(rows)}; qualified={len(qualified)}; watch={len(watch)}; coverage={coverage}; errors={len(errors)}')
 
 
+
+def classify_low_base(rows, market_signals):
+    """Independent research-only classification; never changes legacy scores."""
+    groups = defaultdict(list)
+    for row in rows:
+        groups[(row['market'], row['code'])].append(row)
+    for key in groups:
+        groups[key].sort(key=lambda x: x['date'])
+    classified = []
+    for signal in market_signals:
+        s = dict(signal)
+        series = groups.get((s['market'], s['code']), [])
+        idx = next((i for i in range(len(series)-1, -1, -1)
+                    if series[i]['date'] == s['date']), None)
+        history = series[:idx+1] if idx is not None else []
+        s.update(low_base_score='', low_base_stage='資料不足',
+                 price_position_120='', range_20_pct='',
+                 volume_ratio_5_20='', prior_5_20_volume_ratio='',
+                 breakout_gap_pct='', base_reason='')
+        if len(history) < 120:
+            s['base_reason'] = f'個股有效日線僅{len(history)}筆（需120筆）'
+            classified.append(s)
+            continue
+        window120 = history[-120:]
+        window20 = history[-20:]
+        prior20 = history[-25:-5]
+        last5 = history[-5:]
+        low120 = min(float(r['low']) for r in window120)
+        high120 = max(float(r['high']) for r in window120)
+        low20 = min(float(r['low']) for r in window20)
+        high20 = max(float(r['high']) for r in window20)
+        close = float(s['close'])
+        if low120 <= 0 or low20 <= 0 or close <= 0:
+            s['base_reason'] = '行情價格不合理'
+            classified.append(s)
+            continue
+        position = (close-low120)/(high120-low120) if high120 > low120 else 0.5
+        width = (high20/low20-1)*100
+        vol5 = sum(float(r['volume']) for r in last5)/5
+        vol20 = sum(float(r['volume']) for r in window20)/20
+        prev5 = sum(float(r['volume']) for r in history[-10:-5])/5
+        prev20 = sum(float(r['volume']) for r in prior20)/20 if len(prior20)==20 else None
+        volratio = vol5/vol20 if vol20 else None
+        prev_ratio = prev5/prev20 if prev20 else None
+        trigger = float(s['trigger'])
+        gap = (trigger/close-1)*100
+        s.update(price_position_120=round(position, 3), range_20_pct=round(width, 2),
+                 volume_ratio_5_20=round(volratio, 2) if volratio is not None else '',
+                 prior_5_20_volume_ratio=round(prev_ratio, 2) if prev_ratio is not None else '',
+                 breakout_gap_pct=round(gap, 2))
+        # Explicit, interpretable heuristic; no backtested predictive probabilities.
+        score = (30 if position <= .30 else 20 if position <= .45 else 10 if position <= .60 else 0)
+        score += 25 if width <= 12 else 15 if width <= 20 else 0
+        score += 20 if prev_ratio is not None and prev_ratio <= .85 else (10 if prev_ratio is not None and prev_ratio <= 1 else 0)
+        score += 15 if volratio is not None and 1.1 <= volratio <= 2.5 else (8 if volratio is not None and volratio > 1 else 0)
+        score += 10 if 0 < gap <= 3 else (5 if 3 < gap <= 5 else 0)
+        s['low_base_score'] = score
+        if position > .6 or width > 25:
+            stage = '排除'
+            reason = '120日位置偏高或20日波幅過大'
+        elif gap <= 0:
+            stage = '已觸發待確認'
+            reason = '觸及突破價；尚需收盤與後續量能確認'
+        elif position <= .45 and width <= 20 and prev_ratio is not None and prev_ratio <= 1 and volratio is not None and volratio < 1.1:
+            stage = '低位整理觀察'
+            reason = '相對低位、整理與前期量縮；尚未放量'
+        elif position <= .45 and width <= 20 and volratio is not None and volratio >= 1.1 and 0 < gap <= 5:
+            stage = '等待啟動'
+            reason = '相對低位整理、近5日量能改善、尚未觸價'
+        else:
+            stage = '一般觀察'
+            reason = '未同時符合低位、整理與量能條件'
+        s['low_base_stage'] = stage
+        s['base_reason'] = reason
+        classified.append(s)
+    return classified
+
+
+def publish_low_base(rows, signals):
+    latest_by_market = {m: max((r['date'] for r in rows if r['market']==m), default='') for m in LATEST}
+    current = [s for s in signals if s['date']==latest_by_market.get(s['market'])]
+    records = classify_low_base(rows, current)
+    cols = ['date','market','code','name','type','score','low_base_score','low_base_stage',
+            'close','trigger','fail','price_position_120','range_20_pct',
+            'volume_ratio_5_20','prior_5_20_volume_ratio','breakout_gap_pct',
+            'history_days','volume','turnover','base_reason']
+    order = {'等待啟動':0, '低位整理觀察':1, '已觸發待確認':2,
+             '一般觀察':3, '資料不足':4, '排除':5}
+    records.sort(key=lambda s: (order.get(s['low_base_stage'], 9),
+                                -(s['low_base_score'] if isinstance(s['low_base_score'], int) else -1),
+                                -s['score'], s['market'], s['code']))
+    csv_report(DOC/'low_base.csv', records, cols)
+    counts = {stage:sum(s['low_base_stage']==stage for s in records)
+              for stage in order}
+    print(f'Low-base V2.4 stages={counts}; total={len(records)}')
+    # Append independent view to existing report; leave original ranking unchanged.
+    path = DOC/'index.html'
+    page = path.read_text(encoding='utf-8')
+    summary = html.escape(str(counts))
+    extra = ('<div class="box"><h2>V2.4 低位吸籌研究分類</h2>'
+             '<p>與原始三K分數分開計算；不代表買進訊號或主力籌碼證據。</p>'
+             f'<p>{summary}</p><p><a href="low_base.csv">下載分類清單 low_base.csv</a></p></div>')
+    page = page.replace('</html>', extra+'</html>')
+    page = page.replace('台股三 K 盤後掃描 V2.3.4', '台股三 K 盤後掃描 V2.4.0')
+    path.write_text(page, encoding='utf-8')
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--backfill-days', type=int, default=120,
@@ -467,6 +573,7 @@ def main(argv=None):
     signals, groups = scan(rows)
     coverage = {m: len({r['date'] for r in rows if r['market'] == m}) for m in LATEST}
     publish(rows, signals, backtest(signals, groups), errors, coverage, args.min_volume, args.min_turnover)
+    publish_low_base(rows, signals)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
