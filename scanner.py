@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.4.0. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.4.1. Stdlib only; official TWSE/TPEx data."""
 import argparse
 import csv
 import datetime as dt
@@ -463,6 +463,134 @@ def publish_low_base(rows, signals):
     page = page.replace('台股三 K 盤後掃描 V2.3.4', '台股三 K 盤後掃描 V2.4.0')
     path.write_text(page, encoding='utf-8')
 
+def publish_trigger_tracking(rows, signals, track_from='2026-10-16', max_horizon=20):
+    """Forward-only tracking of frozen historical signal levels; no trade fills inferred.
+
+    The signal becomes known only at its right-candle close. Evaluation starts on
+    the NEXT stock trading bar. If a bar reaches both levels, order is unknown.
+    Missing calendar dates are not silently counted as trading days.
+    """
+    DOC.mkdir(parents=True, exist_ok=True)
+    groups = defaultdict(list)
+    for row in rows:
+        try:
+            groups[(row['market'], row['code'])].append({
+                **row, **{k: float(row[k]) for k in ('open', 'high', 'low', 'close')}})
+        except (ValueError, TypeError, KeyError):
+            continue
+    index = {}
+    for key, series in groups.items():
+        series.sort(key=lambda r: r['date'])
+        index[key] = {r['date']: i for i, r in enumerate(series)}
+    result = []
+    for signal in signals:
+        if signal['date'] < track_from:
+            continue
+        key = (signal['market'], signal['code'])
+        series = groups.get(key, [])
+        pos = index.get(key, {}).get(signal['date'])
+        if pos is None:
+            continue
+        trigger, fail = float(signal['trigger']), float(signal['fail'])
+        forward = series[pos+1:pos+1+max_horizon+20]
+        future = forward[:max_horizon]
+        triggered_at = None
+        invalid_at = None
+        ambiguous_at = None
+        for j, bar in enumerate(future):
+            touch_trigger = bar['high'] >= trigger
+            touch_fail = bar['low'] <= fail
+            if touch_trigger and touch_fail:
+                ambiguous_at = j
+                break
+            if touch_fail:
+                invalid_at = j
+                break
+            if touch_trigger:
+                triggered_at = j
+                break
+        if ambiguous_at is not None:
+            status = '同日觸發與失效_先後未知'
+        elif invalid_at is not None:
+            status = '觸發前失效'
+        elif triggered_at is not None:
+            status = '已觸及Trigger_待驗證'
+        elif len(future) >= max_horizon:
+            status = '觀察期滿未觸發'
+        else:
+            status = '尚在觀察'
+        event_index = triggered_at if triggered_at is not None else (
+            invalid_at if invalid_at is not None else ambiguous_at)
+        event_date = future[event_index]['date'] if event_index is not None else ''
+        event_days = event_index+1 if event_index is not None else ''
+        row = dict(signal_date=signal['date'], market=signal['market'], code=signal['code'],
+                   name=signal['name'], type=signal['type'], signal_score=signal['score'],
+                   signal_close=signal['close'], trigger=trigger, fail=fail,
+                   signal_close_already_at_trigger=int(float(signal['close']) >= trigger),
+                   status=status, event_date=event_date, bars_to_event=event_days,
+                   bars_observed=len(future), horizon_complete=int(len(future) >= max_horizon),
+                   last_observed_date=future[-1]['date'] if future else '',
+                   last_close=future[-1]['close'] if future else '',
+                   last_close_vs_trigger_pct=(round(100*(future[-1]['close']/trigger-1), 2)
+                                              if future else ''),
+                   touched_fail_after_trigger='', ret_1='', ret_3='', ret_5='',
+                   ret_10='', ret_20='', max_high_vs_trigger_pct='',
+                   min_low_vs_trigger_pct='')
+        # Event-date intraday order cannot be reconstructed from daily OHLC.
+        # Subsequent returns use the event day's CLOSE as reference, not a
+        # hypothetical execution at Trigger. No same-day profit is inferred.
+        if triggered_at is not None:
+            event_close = future[triggered_at]['close']
+            after = forward[triggered_at+1:]
+            for horizon in (1, 3, 5, 10, 20):
+                if len(after) >= horizon:
+                    row[f'ret_{horizon}'] = round(100*(after[horizon-1]['close']/event_close-1), 2)
+            if after:
+                row['max_high_vs_trigger_pct'] = round(100*(max(b['high'] for b in after)/trigger-1), 2)
+                row['min_low_vs_trigger_pct'] = round(100*(min(b['low'] for b in after)/trigger-1), 2)
+                row['touched_fail_after_trigger'] = int(any(b['low'] <= fail for b in after))
+        result.append(row)
+    cols = ['signal_date','market','code','name','type','signal_score','signal_close',
+            'trigger','fail','signal_close_already_at_trigger','status','event_date',
+            'bars_to_event','bars_observed','horizon_complete','last_observed_date',
+            'last_close','last_close_vs_trigger_pct','touched_fail_after_trigger',
+            'ret_1','ret_3','ret_5','ret_10','ret_20',
+            'max_high_vs_trigger_pct','min_low_vs_trigger_pct']
+    result.sort(key=lambda r: (r['signal_date'], r['market'], r['code']), reverse=True)
+    csv_report(DOC/'trigger_tracking.csv', result, cols)
+    summaries = []
+    for kind in ('A','B','ALL'):
+        cohort = [r for r in result if kind == 'ALL' or r['type'] == kind]
+        # Only fully observed 20-bar windows enter 20-bar event rate denominators.
+        complete = [r for r in cohort if r['horizon_complete']]
+        triggered = [r for r in complete if r['status'] == '已觸及Trigger_待驗證']
+        summaries.append(dict(type=kind, signals=len(cohort), complete_20bar=len(complete),
+                              triggered_within_20=len(triggered),
+                              trigger_rate_pct=(round(100*len(triggered)/len(complete), 2)
+                                                if complete else ''),
+                              ambiguous=sum(r['status']=='同日觸發與失效_先後未知' for r in complete),
+                              failed_before_trigger=sum(r['status']=='觸發前失效' for r in complete)))
+    csv_report(DOC/'trigger_summary.csv', summaries,
+               ['type','signals','complete_20bar','triggered_within_20',
+                'trigger_rate_pct','ambiguous','failed_before_trigger'])
+    page_path = DOC/'index.html'
+    if page_path.exists():
+        page = page_path.read_text(encoding='utf-8')
+        extra = ('<div class="box"><h2>V2.4.1 Trigger 訊號追蹤</h2>'
+                 '<p>從訊號次一交易日開始觀察；同日觸發與失效無法由日K判斷先後。'
+                 '收益為觸發日收盤至後續收盤的觀察報酬，非實際成交報酬。</p>'
+                 '<p><a href="trigger_tracking.csv">下載逐筆追蹤</a> · '
+                 '<a href="trigger_summary.csv">下載 A/B 統計</a></p></div>')
+        page_path.write_text(page.replace('</html>', extra+'</html>')
+                             .replace('台股三 K 盤後掃描 V2.4.0', '台股三 K 盤後掃描 V2.4.1'),
+                             encoding='utf-8')
+    statuses = defaultdict(int)
+    for item in result:
+        statuses[item['status']] += 1
+    print(f'Trigger tracking V2.4.1: from={track_from}; events={len(result)}; statuses={dict(statuses)}')
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--backfill-days', type=int, default=120,
@@ -474,6 +602,10 @@ def main(argv=None):
     parser.add_argument('--request-pause', type=float, default=0.8,
                         help='Delay between historical API requests in seconds')
     parser.add_argument('--skip-latest', action='store_true')
+    parser.add_argument('--track-from', default='2026-10-16',
+                        help='First signal date to track, YYYY-MM-DD')
+    parser.add_argument('--track-bars', type=int, default=20,
+                        help='Forward stock-trading bars to inspect')
     parser.add_argument('--min-volume', type=float, default=100000, help='Minimum daily traded shares')
     parser.add_argument('--min-turnover', type=float, default=2000000, help='Estimated NT$ traded value')
     args = parser.parse_args(argv)
@@ -574,6 +706,7 @@ def main(argv=None):
     coverage = {m: len({r['date'] for r in rows if r['market'] == m}) for m in LATEST}
     publish(rows, signals, backtest(signals, groups), errors, coverage, args.min_volume, args.min_turnover)
     publish_low_base(rows, signals)
+    publish_trigger_tracking(rows, signals, args.track_from, args.track_bars)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
