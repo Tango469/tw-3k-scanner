@@ -1,4 +1,4 @@
-"""Taiwan 3K scanner V2.4.1. Stdlib only; official TWSE/TPEx data."""
+"""Taiwan 3K scanner V2.5 research wrapper over frozen V2.4.1 logic."""
 import argparse
 import csv
 import datetime as dt
@@ -707,6 +707,8 @@ def main(argv=None):
     publish(rows, signals, backtest(signals, groups), errors, coverage, args.min_volume, args.min_turnover)
     publish_low_base(rows, signals)
     publish_trigger_tracking(rows, signals, args.track_from, args.track_bars)
+    from v25_factors import run as publish_v25_research
+    publish_v25_research()
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
