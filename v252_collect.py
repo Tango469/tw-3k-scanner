@@ -95,12 +95,13 @@ def parse_tpex(payload,day):
         if d!=day: continue
         code=str(field('SecuritiesCompanyCode','證券代號','股票代號','代號','Code') or '').strip()
         if not re.fullmatch(r'[1-9]\d{3}',code): continue
-        vals=[field('ForeignInvestorsNetBuySell','外資及陸資買賣超股數','外資買賣超股數'),
-              field('InvestmentTrustNetBuySell','投信買賣超股數'),
-              field('DealerNetBuySell','自營商買賣超股數')]
+        vals=[field('ForeignInvestorsIncludeMainlandAreaInvestors-TotalDifference','ForeignInvestorsNetBuySell','外資及陸資買賣超股數','外資買賣超股數'),
+              field('SecuritiesInvestmentTrustCompanies-TotalDifference','InvestmentTrustNetBuySell','投信買賣超股數'),
+              field('Dealers-TotalDifference','DealerNetBuySell','自營商買賣超股數')]
         if any(v is None for v in vals): continue
         nums=[num(v) for v in vals]
         if any(v is None for v in nums): continue
+        # Official TPEx fields are reported as shares; preserve signed difference.
         for f,v in zip(('foreign_net_shares','trust_net_shares','dealer_net_shares'),nums):
             out.append(observation('TPEX',code,f,v,day,'TPEx OpenAPI'))
     return out
