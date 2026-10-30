@@ -10,7 +10,7 @@ import json
 import re
 import time
 import urllib.request
-from collections import defaultdict
+from collections import defaultdict, Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -85,25 +85,34 @@ def parse_tpex(payload,day):
     # TPEx OpenAPI may publish a latest-only snapshot; require explicit row date.
     if not isinstance(payload,list): raise ValueError('TPEx format changed')
     out=[]
+    rejected=Counter()
+    samples={}
     for r in payload:
-        if not isinstance(r,dict): continue
+        if not isinstance(r,dict):
+            rejected["non_dict"]+=1;continue
         def field(*names):
             for n in names:
                 if n in r and str(r[n]).strip(): return r[n]
             return None
         d=norm_date(field('Date','日期','資料日期','交易日期','date'))
-        if d!=day: continue
+        if d!=day:
+            rejected["date_mismatch"]+=1;samples.setdefault("date_mismatch",repr(field("Date","日期","資料日期","交易日期","date")));continue
         code=str(field('SecuritiesCompanyCode','證券代號','股票代號','代號','Code') or '').strip()
-        if not re.fullmatch(r'[1-9]\d{3}',code): continue
+        if not re.fullmatch(r'[1-9]\d{3}',code):
+            rejected['invalid_code']+=1;samples.setdefault('invalid_code',repr(code));continue
         vals=[field('ForeignInvestorsIncludeMainlandAreaInvestors-TotalDifference','ForeignInvestorsNetBuySell','外資及陸資買賣超股數','外資買賣超股數'),
               field('SecuritiesInvestmentTrustCompanies-TotalDifference','InvestmentTrustNetBuySell','投信買賣超股數'),
               field('Dealers-TotalDifference','DealerNetBuySell','自營商買賣超股數')]
-        if any(v is None for v in vals): continue
+        if any(v is None for v in vals):
+            rejected['missing_field']+=1;samples.setdefault('missing_field',repr(vals));continue
         nums=[num(v) for v in vals]
-        if any(v is None for v in nums): continue
+        if any(v is None for v in nums):
+            rejected['invalid_number']+=1;samples.setdefault('invalid_number',repr(vals));continue
+        rejected['accepted']+=1
         # Official TPEx fields are reported as shares; preserve signed difference.
         for f,v in zip(('foreign_net_shares','trust_net_shares','dealer_net_shares'),nums):
             out.append(observation('TPEX',code,f,v,day,'TPEx OpenAPI'))
+    print(f'V2.5.3 TPEx parse audit: {dict(rejected)}; samples={samples}')
     return out
 
 def market_factors(rows, day):
