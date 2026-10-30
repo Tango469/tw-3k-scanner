@@ -152,11 +152,54 @@ def run():
             if any(number(r.get(f'ret_{h}')) is not None for h in (1,3,5,10,20)):
                 dated['triggered_with_any_matured_return']+=1
     for key,value in dated.items(): checks.append({'check':key,'value':value})
+    # Hotfix 2: explain missing group samples without relaxing point-in-time rules.
+    # These are diagnostic counts, not backtest results.
+    factor_days=defaultdict(set)
+    factor_types=Counter()
+    for (m,c,f),values in index.items():
+        factor_types[f]+=len(values)
+        for at,obs,val,src in values:
+            factor_days[m].add(obs.isoformat())
+    signal_days=sorted({r.get('signal_date','') for r in output if r.get('signal_date')})
+    triggered_rows=[r for r in output if r['valid_trigger_event']]
+    with_any_raw_factor=0
+    with_raw_date_overlap=0
+    raw_factors_by_stock=defaultdict(list)
+    for (m,c,f),values in index.items():
+        if c!='ALL':
+            raw_factors_by_stock[(m,c)].extend(values)
+    for r in triggered_rows:
+        day=r.get('signal_date','')
+        end=cutoff(day)
+        if not end:continue
+        if any(obs.isoformat()<=day for obs in (v[1] for v in raw_factors_by_stock.get((r.get('market'),r.get('code')),()))):
+            with_raw_date_overlap+=1
+        if any(at<=end and obs<=end.date() for at,obs,val,src in raw_factors_by_stock.get((r.get('market'),r.get('code')),())):
+            with_any_raw_factor+=1
+    derived_present={f:factor_types.get(f,0) for f in FACTOR_NAMES}
+    audit_extra={
+        'triggered_with_raw_stock_factor_available':with_any_raw_factor,
+        'triggered_with_raw_stock_observation_on_or_before_signal':with_raw_date_overlap,
+        'earliest_signal_date':signal_days[0] if signal_days else '',
+        'latest_signal_date':signal_days[-1] if signal_days else '',
+        'research_factor_types_present':sum(bool(v) for v in derived_present.values()),
+        'research_factor_types_expected':len(FACTOR_NAMES),
+    }
+    for m in ('TWSE','TPEX'):
+        d=sorted(factor_days[m]);audit_extra[f'{m.lower()}_earliest_factor_date']=d[0] if d else ''
+        audit_extra[f'{m.lower()}_latest_factor_date']=d[-1] if d else ''
+    for f,n in derived_present.items():audit_extra[f'raw_rows_{f}']=n
+    checks.extend({'check':k,'value':v} for k,v in audit_extra.items())
     checks.extend(funnel)
     checks.extend({'check':'invalid_'+k,'value':v} for k,v in sorted(invalid.items()))
     write(DOC/'v253_quality_audit.csv',checks,['check','value'])
     print('V2.5.3 research: events={}; factor_matches={}; snapshots={}; triggered={}; reportable_groups={}; TPEx_institutional_rows={}'.format(len(events),sum(r['factor_count'] for r in output),sum(r['snapshot_found'] for r in output),eligible_events,sum(x['reportable'] for x in groups),checks[7]['value']))
     print('V2.5.3 audit: triggered_with_any_factor={}; triggered_with_any_matured_return={}'.format(dated['triggered_with_any_factor'],dated['triggered_with_any_matured_return']))
+    print('V2.5.3 hotfix2 coverage: raw_stock_available={}; raw_stock_date_overlap={}; research_factor_types={}/{}; signal_dates={}..{}; TWSE_factor_dates={}..{}; TPEX_factor_dates={}..{}'.format(
+        with_any_raw_factor,with_raw_date_overlap,sum(bool(v) for v in derived_present.values()),len(FACTOR_NAMES),
+        audit_extra['earliest_signal_date'],audit_extra['latest_signal_date'],
+        audit_extra['twse_earliest_factor_date'],audit_extra['twse_latest_factor_date'],
+        audit_extra['tpex_earliest_factor_date'],audit_extra['tpex_latest_factor_date']))
     print('V2.5.3 patch funnel: '+', '.join(f'h{h}='+str(next(x['value'] for x in funnel if x['check']==f'h{h}_completed_and_any_factor')) for h in (1,3,5,10,20)))
     if not checks[7]['value']:print('V2.5.3 WARN: TPEx institutional coverage missing; do not compare TWSE and TPEx institutional factors.')
 
