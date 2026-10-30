@@ -713,6 +713,8 @@ def main(argv=None):
     publish_v25_research()
     from v253_research import run as run_v253_research
     run_v253_research()
+    from v254_institutional import run as run_v254_research
+    run_v254_research(rows)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
