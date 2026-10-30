@@ -149,8 +149,12 @@ def run():
     index = defaultdict(list)
     for row in factors:
         at = timestamp(row.get('available_at'))
-        obs = timestamp(row.get('observation_date'))
-        if at is None or obs is None or at < obs:
+        obs_day = row.get('observation_date', '').strip()
+        try:
+            obs = dt.datetime.combine(dt.date.fromisoformat(obs_day), dt.time.min, tzinfo=dt.timezone(dt.timedelta(hours=8)))
+        except ValueError:
+            continue
+        if at is None or at < obs:
             continue
         key = (row.get('market', '').strip(), row.get('code', '').strip(), row.get('factor', '').strip())
         if key[2] not in FACTORS:
