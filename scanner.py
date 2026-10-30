@@ -711,6 +711,8 @@ def main(argv=None):
     collect_v252_factors(rows)
     from v25_factors import run as publish_v25_research
     publish_v25_research()
+    from v253_research import run as run_v253_research
+    run_v253_research()
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
