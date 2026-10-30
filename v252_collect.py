@@ -156,7 +156,11 @@ def collect(rows):
         except Exception as e:
             print(f'V2.5.2 WARN TWSE T86 {d}: {e}')
     try:
-        found=parse_tpex(get_json(TPEX_URL),latest)
+        payload=get_json(TPEX_URL)
+        found=parse_tpex(payload,latest)
+        if not found and isinstance(payload,list) and payload:
+            sample=payload[0]
+            print(f'V2.5.3 TPEx schema diagnostic: rows={len(payload)}; fields={list(sample) if isinstance(sample,dict) else type(sample).__name__}; date_sample={[(k,v) for k,v in sample.items() if any(t in k.lower() for t in ("date","日期","交易日"))][:3] if isinstance(sample,dict) else []}')
         observations.extend(found)
         print(f'V2.5.2 TPEx institution {latest}: {len(found)//3} stocks (date-verified)')
     except Exception as e:
