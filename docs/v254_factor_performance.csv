@@ -1,0 +1,101 @@
+﻿factor,horizon,group,samples,min_samples,reportable,win_rate_pct,mean_return_pct,note
+foreign_net_1d_shares,1,positive,204,20,1,20.1,-1.622,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,1,nonpositive,48,20,1,31.25,-0.529,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,3,positive,46,20,1,26.09,-1.27,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,3,nonpositive,13,20,0,,,insufficient_samples
+foreign_net_1d_shares,5,positive,0,20,0,,,insufficient_samples
+foreign_net_1d_shares,5,nonpositive,0,20,0,,,insufficient_samples
+foreign_net_1d_shares,10,positive,0,20,0,,,insufficient_samples
+foreign_net_1d_shares,10,nonpositive,0,20,0,,,insufficient_samples
+foreign_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
+foreign_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,1,positive,49,20,1,22.45,-1.332,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,1,nonpositive,203,20,1,22.17,-1.433,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,3,positive,8,20,0,,,insufficient_samples
+trust_net_1d_shares,3,nonpositive,51,20,1,23.53,-1.265,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,5,positive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,5,nonpositive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,10,positive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,10,nonpositive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
+trust_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,1,positive,105,20,1,12.38,-2.299,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,1,nonpositive,147,20,1,29.25,-0.781,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,3,positive,12,20,0,,,insufficient_samples
+dealer_net_1d_shares,3,nonpositive,47,20,1,27.66,-1.065,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,5,positive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,5,nonpositive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,10,positive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,10,nonpositive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
+dealer_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,1,positive,203,20,1,20.69,-1.624,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,1,nonpositive,49,20,1,28.57,-0.543,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,3,positive,47,20,1,25.53,-1.462,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,3,nonpositive,12,20,0,,,insufficient_samples
+institutional_net_1d_shares,5,positive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,5,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,10,positive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,10,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
+institutional_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,1,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,1,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,3,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,3,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,5,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,5,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,10,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,10,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,20,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_shares,20,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,1,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,1,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,3,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,3,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,5,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,5,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,10,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,10,nonpositive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,20,positive,0,20,0,,,insufficient_samples
+institutional_net_5d_volume_ratio,20,nonpositive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,1,positive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,1,nonpositive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,3,positive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,3,nonpositive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,5,positive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,5,nonpositive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,10,positive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,10,nonpositive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,20,positive,0,20,0,,,insufficient_samples
+foreign_consecutive_buy_days,20,nonpositive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,1,positive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,1,nonpositive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,3,positive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,3,nonpositive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,5,positive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,5,nonpositive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,10,positive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,10,nonpositive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,20,positive,0,20,0,,,insufficient_samples
+trust_consecutive_buy_days,20,nonpositive,0,20,0,,,insufficient_samples
+market_advance_ratio,1,positive,0,20,0,,,insufficient_samples
+market_advance_ratio,1,nonpositive,0,20,0,,,insufficient_samples
+market_advance_ratio,3,positive,0,20,0,,,insufficient_samples
+market_advance_ratio,3,nonpositive,0,20,0,,,insufficient_samples
+market_advance_ratio,5,positive,0,20,0,,,insufficient_samples
+market_advance_ratio,5,nonpositive,0,20,0,,,insufficient_samples
+market_advance_ratio,10,positive,0,20,0,,,insufficient_samples
+market_advance_ratio,10,nonpositive,0,20,0,,,insufficient_samples
+market_advance_ratio,20,positive,0,20,0,,,insufficient_samples
+market_advance_ratio,20,nonpositive,0,20,0,,,insufficient_samples
+market_return_5d_pct,1,positive,0,20,0,,,insufficient_samples
+market_return_5d_pct,1,nonpositive,0,20,0,,,insufficient_samples
+market_return_5d_pct,3,positive,0,20,0,,,insufficient_samples
+market_return_5d_pct,3,nonpositive,0,20,0,,,insufficient_samples
+market_return_5d_pct,5,positive,0,20,0,,,insufficient_samples
+market_return_5d_pct,5,nonpositive,0,20,0,,,insufficient_samples
+market_return_5d_pct,10,positive,0,20,0,,,insufficient_samples
+market_return_5d_pct,10,nonpositive,0,20,0,,,insufficient_samples
+market_return_5d_pct,20,positive,0,20,0,,,insufficient_samples
+market_return_5d_pct,20,nonpositive,0,20,0,,,insufficient_samples
