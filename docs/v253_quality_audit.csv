@@ -7,6 +7,8 @@ snapshot_matches,1256
 unambiguous_trigger_events,1113
 reportable_groups,0
 tpex_institutional_raw_rows,0
+triggered_total,1113
+triggered_with_any_matured_return,1085
 h1_triggered,1113
 h1_completed_return,1085
 h1_completed_and_any_factor,0
