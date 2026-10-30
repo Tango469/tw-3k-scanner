@@ -707,6 +707,8 @@ def main(argv=None):
     publish(rows, signals, backtest(signals, groups), errors, coverage, args.min_volume, args.min_turnover)
     publish_low_base(rows, signals)
     publish_trigger_tracking(rows, signals, args.track_from, args.track_bars)
+    from v252_collect import collect as collect_v252_factors
+    collect_v252_factors(rows)
     from v25_factors import run as publish_v25_research
     publish_v25_research()
     if errors:
