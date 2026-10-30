@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 INPUT = ROOT / 'data' / 'factors'
 OUTPUT = ROOT / 'docs'
-FACTORS = ['institutional_net_5d_ratio', 'market_return_5d_pct', 'sector_return_5d_pct',
+FACTORS = ['institutional_net_5d_ratio', 'market_advance_ratio', 'market_return_5d_pct', 'sector_return_5d_pct',
            'us_proxy_return_pct', 'revenue_yoy_pct', 'news_catalyst']
 
 
@@ -108,6 +108,40 @@ def run():
             manual.append({'market':market,'code':code,'factor':factor,
                            'value':r[col],'observation_date':r['date'],
                            'available_at':r['available_at'],'source':'market_context.csv'})
+    # Compute rolling 5-session institutional net-buy ratio from dated raw shares.
+    # Denominator is 5-day trading volume for each stock; no fabricated zeros.
+    raw = load_csv(INPUT/'factor_observations.csv')
+    from collections import defaultdict as _dd
+    raw_by_stock = _dd(lambda: _dd(dict))
+    for item in raw:
+        if item.get('factor') in ('foreign_net_shares','trust_net_shares','dealer_net_shares'):
+            raw_by_stock[(item.get('market'),item.get('code'))][item.get('observation_date')][item['factor']] = item
+    daily_path = ROOT/'data'/'daily.csv'
+    volume_by_stock = _dd(dict)
+    for item in load_csv(daily_path):
+        v = numeric(item.get('volume'))
+        if v is not None and v>0:
+            volume_by_stock[(item.get('market'),item.get('code'))][item.get('date')] = v
+    for key, dates in raw_by_stock.items():
+        volumes=volume_by_stock.get(key,{})
+        trading_days=sorted(volumes)
+        for day in sorted(dates):
+            if day not in volumes: continue
+            ix=trading_days.index(day)
+            window=trading_days[max(0,ix-4):ix+1]
+            if len(window)!=5: continue
+            # All 3 institutional components must be available for every session.
+            observations=[dates.get(d,{}) for d in window]
+            if any(len(x)!=3 for x in observations): continue
+            vals=[numeric(x[k].get('value')) for x in observations for k in ('foreign_net_shares','trust_net_shares','dealer_net_shares')]
+            if any(x is None for x in vals):continue
+            total_vol=sum(volumes[d] for d in window)
+            if total_vol<=0:continue
+            available_times=[timestamp(x[k].get('available_at')) for x in observations for k in ('foreign_net_shares','trust_net_shares','dealer_net_shares')]
+            if any(x is None for x in available_times):continue
+            manual.append({'market':key[0],'code':key[1], 'factor':'institutional_net_5d_ratio',
+                           'value':str(sum(vals)/total_vol),'observation_date':day,
+                           'available_at':max(available_times).isoformat(), 'source':'TWSE/TPEx institutional 5-session rollup'})
     events = load_csv(OUTPUT/'trigger_tracking.csv')
     factors = manual
     # Explicit event snapshots from previous signal days, not latest-only low_base.csv.
