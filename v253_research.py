@@ -119,6 +119,22 @@ def run():
                                'mean_return_pct':round(sum(selected)/n,3) if n>=minimum else '',
                                'note':'descriptive_only; signal-day known factors; next-session decision' if n>=minimum else 'insufficient_sample'})
     write(DOC/'v253_factor_performance.csv',groups,['factor','horizon','group','samples','distinct_signals','min_samples','reportable','win_rate_pct','mean_return_pct','note'])
+    # Diagnostic funnel: count eligible events at each step without weakening
+    # the 20-observation reporting threshold or inventing forward returns.
+    funnel=[]
+    for horizon in (1,3,5,10,20):
+        ret_key=f'ret_{horizon}'
+        triggered_rows=[r for r in output if r['valid_trigger_event']]
+        matured=[r for r in triggered_rows if number(r.get(ret_key)) is not None]
+        factor_ready=[r for r in matured if r['factor_count']>0]
+        funnel.extend([
+            {'check':f'h{horizon}_triggered','value':len(triggered_rows)},
+            {'check':f'h{horizon}_completed_return','value':len(matured)},
+            {'check':f'h{horizon}_completed_and_any_factor','value':len(factor_ready)},
+        ])
+        for factor in FACTOR_NAMES:
+            matched=[r for r in matured if number(r.get(factor)) is not None]
+            funnel.append({'check':f'h{horizon}_{factor}_completed','value':len(matched)})
     market_counts=Counter((r.get('market'),r.get('factor')) for r in raw)
     checks=[{'check':'events','value':len(events)},{'check':'raw_observations','value':len(raw)},
             {'check':'valid_factor_records','value':sum(map(len,index.values()))},
@@ -127,9 +143,11 @@ def run():
             {'check':'unambiguous_trigger_events','value':eligible_events},
             {'check':'reportable_groups','value':sum(x['reportable'] for x in groups)},
             {'check':'tpex_institutional_raw_rows','value':sum(n for (m,f),n in market_counts.items() if m=='TPEX' and f in ('foreign_net_shares','trust_net_shares','dealer_net_shares'))}]
+    checks.extend(funnel)
     checks.extend({'check':'invalid_'+k,'value':v} for k,v in sorted(invalid.items()))
     write(DOC/'v253_quality_audit.csv',checks,['check','value'])
     print('V2.5.3 research: events={}; factor_matches={}; snapshots={}; triggered={}; reportable_groups={}; TPEx_institutional_rows={}'.format(len(events),sum(r['factor_count'] for r in output),sum(r['snapshot_found'] for r in output),eligible_events,sum(x['reportable'] for x in groups),checks[7]['value']))
+    print('V2.5.3 patch funnel: '+', '.join(f'h{h}='+str(next(x['value'] for x in funnel if x['check']==f'h{h}_completed_and_any_factor')) for h in (1,3,5,10,20)))
     if not checks[7]['value']:print('V2.5.3 WARN: TPEx institutional coverage missing; do not compare TWSE and TPEx institutional factors.')
 
 if __name__=='__main__':run()
