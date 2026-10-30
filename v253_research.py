@@ -143,10 +143,20 @@ def run():
             {'check':'unambiguous_trigger_events','value':eligible_events},
             {'check':'reportable_groups','value':sum(x['reportable'] for x in groups)},
             {'check':'tpex_institutional_raw_rows','value':sum(n for (m,f),n in market_counts.items() if m=='TPEX' and f in ('foreign_net_shares','trust_net_shares','dealer_net_shares'))}]
+    # Explain absence of performance groups without changing eligibility rules.
+    dated=Counter()
+    for r in output:
+        if r['valid_trigger_event']:
+            dated['triggered_total']+=1
+            if r['factor_count']>0: dated['triggered_with_any_factor']+=1
+            if any(number(r.get(f'ret_{h}')) is not None for h in (1,3,5,10,20)):
+                dated['triggered_with_any_matured_return']+=1
+    for key,value in dated.items(): checks.append({'check':key,'value':value})
     checks.extend(funnel)
     checks.extend({'check':'invalid_'+k,'value':v} for k,v in sorted(invalid.items()))
     write(DOC/'v253_quality_audit.csv',checks,['check','value'])
     print('V2.5.3 research: events={}; factor_matches={}; snapshots={}; triggered={}; reportable_groups={}; TPEx_institutional_rows={}'.format(len(events),sum(r['factor_count'] for r in output),sum(r['snapshot_found'] for r in output),eligible_events,sum(x['reportable'] for x in groups),checks[7]['value']))
+    print('V2.5.3 audit: triggered_with_any_factor={}; triggered_with_any_matured_return={}'.format(dated['triggered_with_any_factor'],dated['triggered_with_any_matured_return']))
     print('V2.5.3 patch funnel: '+', '.join(f'h{h}='+str(next(x['value'] for x in funnel if x['check']==f'h{h}_completed_and_any_factor')) for h in (1,3,5,10,20)))
     if not checks[7]['value']:print('V2.5.3 WARN: TPEx institutional coverage missing; do not compare TWSE and TPEx institutional factors.')
 
