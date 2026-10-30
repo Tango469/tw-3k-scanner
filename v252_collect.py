@@ -100,9 +100,27 @@ def parse_tpex(payload,day):
         code=str(field('SecuritiesCompanyCode','證券代號','股票代號','代號','Code') or '').strip()
         if not re.fullmatch(r'[1-9]\d{3}',code):
             rejected['invalid_code']+=1;samples.setdefault('invalid_code',repr(code));continue
-        vals=[field('ForeignInvestorsIncludeMainlandAreaInvestors-TotalDifference','ForeignInvestorsNetBuySell','外資及陸資買賣超股數','外資買賣超股數'),
-              field('SecuritiesInvestmentTrustCompanies-TotalDifference','InvestmentTrustNetBuySell','投信買賣超股數'),
-              field('Dealers-TotalDifference','DealerNetBuySell','自營商買賣超股數')]
+        # TPEx uses human-readable English column labels with spaces and punctuation.
+        # Normalize exact known aliases only; never guess from Buy/Sell columns.
+        def canonical(name):
+            return re.sub(r'[^a-z0-9\u4e00-\u9fff]', '', str(name).lower())
+        columns={canonical(k):v for k,v in r.items()}
+        def net(*aliases):
+            for alias in aliases:
+                key=canonical(alias)
+                if key in columns and str(columns[key]).strip():
+                    return columns[key]
+            return None
+        vals=[
+            net('Foreign Investors include Mainland Area Investors (Foreign Dealers excluded)-Difference',
+                'ForeignInvestorsIncludeMainlandAreaInvestors-TotalDifference',
+                'ForeignInvestorsNetBuySell', '外資及陸資買賣超股數', '外資買賣超股數'),
+            net('SecuritiesInvestmentTrustCompanies-Difference',
+                'SecuritiesInvestmentTrustCompanies-TotalDifference',
+                'InvestmentTrustNetBuySell', '投信買賣超股數'),
+            net('Dealers-Difference', 'Dealers-TotalDifference',
+                'DealerNetBuySell', '自營商買賣超股數'),
+        ]
         if any(v is None for v in vals):
             rejected['missing_field']+=1;samples.setdefault('missing_field',repr(vals));continue
         nums=[num(v) for v in vals]
