@@ -1,5 +1,5 @@
 ﻿factor,horizon,group,samples,positive_return_rate_pct,mean_return_pct
-institutional_net_5d_ratio,1,positive_factor,15,40.0,-59.933
-institutional_net_5d_ratio,1,nonpositive_factor,4,0.0,-174.0
-market_advance_ratio,1,positive_factor,32,25.0,-153.687
-market_return_5d_pct,1,nonpositive_factor,32,25.0,-153.687
+institutional_net_5d_ratio,1,positive_factor,47,44.68,2.617
+institutional_net_5d_ratio,1,nonpositive_factor,9,44.44,39.556
+market_advance_ratio,1,positive_factor,105,45.71,44.581
+market_return_5d_pct,1,nonpositive_factor,105,45.71,44.581
