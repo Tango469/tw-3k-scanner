@@ -1,100 +1,100 @@
 ﻿factor,horizon,group,samples,min_samples,reportable,win_rate_pct,mean_return_pct,note
-foreign_net_1d_shares,1,positive,826,20,1,42.98,-0.081,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,1,nonpositive,456,20,1,50.44,0.539,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,3,positive,405,20,1,23.7,-3.248,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,3,nonpositive,138,20,1,23.91,-2.469,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,5,positive,379,20,1,21.37,-4.101,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,5,nonpositive,120,20,1,22.5,-3.108,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,10,positive,203,20,1,8.87,-7.96,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_net_1d_shares,10,nonpositive,48,20,1,20.83,-8.539,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,1,positive,942,20,1,46.39,0.138,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,1,nonpositive,541,20,1,53.97,0.729,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,3,positive,740,20,1,38.92,-0.945,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,3,nonpositive,364,20,1,42.03,0.021,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,5,positive,394,20,1,22.84,-3.921,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,5,nonpositive,131,20,1,24.43,-2.906,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,10,positive,211,20,1,10.43,-7.698,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_net_1d_shares,10,nonpositive,51,20,1,19.61,-8.285,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 foreign_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
 foreign_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
-trust_net_1d_shares,1,positive,158,20,1,46.2,0.129,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,1,nonpositive,1124,20,1,45.55,0.141,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,3,positive,70,20,1,14.29,-5.062,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,3,nonpositive,473,20,1,25.16,-2.752,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,1,positive,175,20,1,50.86,0.313,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,1,nonpositive,1308,20,1,48.93,0.359,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,3,positive,134,20,1,35.82,-1.256,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,3,nonpositive,970,20,1,40.52,-0.539,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 trust_net_1d_shares,5,positive,69,20,1,14.49,-7.709,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,5,nonpositive,430,20,1,22.79,-3.245,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,10,positive,48,20,1,4.17,-11.715,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_net_1d_shares,10,nonpositive,203,20,1,12.81,-7.209,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,5,nonpositive,456,20,1,24.56,-3.056,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,10,positive,49,20,1,4.08,-11.654,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_net_1d_shares,10,nonpositive,213,20,1,14.08,-6.928,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 trust_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
 trust_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
-dealer_net_1d_shares,1,positive,459,20,1,50.98,0.634,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,1,nonpositive,823,20,1,42.65,-0.136,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,3,positive,184,20,1,17.39,-4.588,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,3,nonpositive,359,20,1,27.02,-2.262,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,5,positive,176,20,1,17.61,-5.749,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,5,nonpositive,323,20,1,23.84,-2.835,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,10,positive,104,20,1,5.77,-10.42,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-dealer_net_1d_shares,10,nonpositive,147,20,1,14.97,-6.409,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,1,positive,516,20,1,54.65,0.84,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,1,nonpositive,967,20,1,46.23,0.094,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,3,positive,411,20,1,40.39,-0.925,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,3,nonpositive,693,20,1,39.68,-0.449,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,5,positive,180,20,1,18.89,-5.574,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,5,nonpositive,345,20,1,25.51,-2.673,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,10,positive,107,20,1,6.54,-10.095,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+dealer_net_1d_shares,10,nonpositive,155,20,1,16.13,-6.236,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 dealer_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
 dealer_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
-institutional_net_1d_shares,1,positive,817,20,1,43.45,-0.008,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,1,nonpositive,465,20,1,49.46,0.398,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,3,positive,408,20,1,24.02,-3.242,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,3,nonpositive,135,20,1,22.96,-2.47,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,5,positive,382,20,1,21.47,-4.21,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,5,nonpositive,117,20,1,22.22,-2.726,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,10,positive,202,20,1,8.91,-8.272,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_1d_shares,10,nonpositive,49,20,1,20.41,-7.24,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,1,positive,937,20,1,46.74,0.209,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,1,nonpositive,546,20,1,53.3,0.601,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,3,positive,730,20,1,39.59,-0.905,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,3,nonpositive,374,20,1,40.64,-0.082,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,5,positive,397,20,1,22.92,-4.027,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,5,nonpositive,128,20,1,24.22,-2.552,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,10,positive,209,20,1,10.53,-7.934,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_1d_shares,10,nonpositive,53,20,1,18.87,-7.332,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 institutional_net_1d_shares,20,positive,0,20,0,,,insufficient_samples
 institutional_net_1d_shares,20,nonpositive,0,20,0,,,insufficient_samples
-institutional_net_5d_shares,1,positive,515,20,1,53.98,0.711,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_shares,1,nonpositive,338,20,1,56.8,0.881,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_shares,3,positive,123,20,1,34.15,-1.41,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_shares,3,nonpositive,37,20,1,51.35,0.168,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_shares,5,positive,104,20,1,33.65,-0.738,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_shares,5,nonpositive,25,20,1,44.0,1.577,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,1,positive,616,20,1,56.17,0.812,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,1,nonpositive,427,20,1,61.12,1.132,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,3,positive,427,20,1,50.82,0.841,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,3,nonpositive,268,20,1,53.73,1.62,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,5,positive,115,20,1,35.65,-0.711,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_shares,5,nonpositive,33,20,1,51.52,1.469,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 institutional_net_5d_shares,10,positive,0,20,0,,,insufficient_samples
 institutional_net_5d_shares,10,nonpositive,0,20,0,,,insufficient_samples
 institutional_net_5d_shares,20,positive,0,20,0,,,insufficient_samples
 institutional_net_5d_shares,20,nonpositive,0,20,0,,,insufficient_samples
-institutional_net_5d_volume_ratio,1,positive,515,20,1,53.98,0.711,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_volume_ratio,1,nonpositive,338,20,1,56.8,0.881,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_volume_ratio,3,positive,123,20,1,34.15,-1.41,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_volume_ratio,3,nonpositive,37,20,1,51.35,0.168,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_volume_ratio,5,positive,104,20,1,33.65,-0.738,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-institutional_net_5d_volume_ratio,5,nonpositive,25,20,1,44.0,1.577,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,1,positive,616,20,1,56.17,0.812,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,1,nonpositive,427,20,1,61.12,1.132,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,3,positive,427,20,1,50.82,0.841,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,3,nonpositive,268,20,1,53.73,1.62,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,5,positive,115,20,1,35.65,-0.711,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+institutional_net_5d_volume_ratio,5,nonpositive,33,20,1,51.52,1.469,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 institutional_net_5d_volume_ratio,10,positive,0,20,0,,,insufficient_samples
 institutional_net_5d_volume_ratio,10,nonpositive,0,20,0,,,insufficient_samples
 institutional_net_5d_volume_ratio,20,positive,0,20,0,,,insufficient_samples
 institutional_net_5d_volume_ratio,20,nonpositive,0,20,0,,,insufficient_samples
-foreign_consecutive_buy_days,1,positive,526,20,1,52.85,0.629,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_consecutive_buy_days,1,nonpositive,327,20,1,58.72,1.019,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_consecutive_buy_days,3,positive,118,20,1,37.29,-1.297,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_consecutive_buy_days,3,nonpositive,42,20,1,40.48,-0.335,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_consecutive_buy_days,5,positive,99,20,1,33.33,-1.131,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-foreign_consecutive_buy_days,5,nonpositive,30,20,1,43.33,2.485,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,1,positive,640,20,1,56.25,0.831,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,1,nonpositive,403,20,1,61.29,1.122,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,3,positive,445,20,1,51.91,1.019,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,3,nonpositive,250,20,1,52.0,1.359,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,5,positive,111,20,1,36.94,-0.953,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+foreign_consecutive_buy_days,5,nonpositive,37,20,1,45.95,1.959,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 foreign_consecutive_buy_days,10,positive,0,20,0,,,insufficient_samples
 foreign_consecutive_buy_days,10,nonpositive,0,20,0,,,insufficient_samples
 foreign_consecutive_buy_days,20,positive,0,20,0,,,insufficient_samples
 foreign_consecutive_buy_days,20,nonpositive,0,20,0,,,insufficient_samples
-trust_consecutive_buy_days,1,positive,107,20,1,57.94,0.912,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_consecutive_buy_days,1,nonpositive,746,20,1,54.69,0.759,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
-trust_consecutive_buy_days,3,positive,19,20,0,,,insufficient_samples
-trust_consecutive_buy_days,3,nonpositive,141,20,1,40.43,-0.771,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_consecutive_buy_days,1,positive,124,20,1,62.9,1.064,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_consecutive_buy_days,1,nonpositive,919,20,1,57.56,0.927,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_consecutive_buy_days,3,positive,83,20,1,50.6,1.536,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_consecutive_buy_days,3,nonpositive,612,20,1,52.12,1.088,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 trust_consecutive_buy_days,5,positive,19,20,0,,,insufficient_samples
-trust_consecutive_buy_days,5,nonpositive,110,20,1,34.55,-0.378,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+trust_consecutive_buy_days,5,nonpositive,129,20,1,38.76,-0.291,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 trust_consecutive_buy_days,10,positive,0,20,0,,,insufficient_samples
 trust_consecutive_buy_days,10,nonpositive,0,20,0,,,insufficient_samples
 trust_consecutive_buy_days,20,positive,0,20,0,,,insufficient_samples
 trust_consecutive_buy_days,20,nonpositive,0,20,0,,,insufficient_samples
-market_advance_ratio,1,positive,1045,20,1,50.91,0.48,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_advance_ratio,1,positive,1250,20,1,54.08,0.672,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_advance_ratio,1,nonpositive,0,20,0,,,insufficient_samples
-market_advance_ratio,3,positive,300,20,1,33.67,-2.052,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_advance_ratio,3,positive,865,20,1,47.98,0.421,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_advance_ratio,3,nonpositive,0,20,0,,,insufficient_samples
-market_advance_ratio,5,positive,253,20,1,35.57,-0.74,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_advance_ratio,5,positive,279,20,1,37.28,-0.665,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_advance_ratio,5,nonpositive,0,20,0,,,insufficient_samples
 market_advance_ratio,10,positive,0,20,0,,,insufficient_samples
 market_advance_ratio,10,nonpositive,0,20,0,,,insufficient_samples
 market_advance_ratio,20,positive,0,20,0,,,insufficient_samples
 market_advance_ratio,20,nonpositive,0,20,0,,,insufficient_samples
 market_return_5d_pct,1,positive,0,20,0,,,insufficient_samples
-market_return_5d_pct,1,nonpositive,1045,20,1,50.91,0.48,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_return_5d_pct,1,nonpositive,1250,20,1,54.08,0.672,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_return_5d_pct,3,positive,0,20,0,,,insufficient_samples
-market_return_5d_pct,3,nonpositive,300,20,1,33.67,-2.052,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_return_5d_pct,3,nonpositive,865,20,1,47.98,0.421,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_return_5d_pct,5,positive,0,20,0,,,insufficient_samples
-market_return_5d_pct,5,nonpositive,253,20,1,35.57,-0.74,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
+market_return_5d_pct,5,nonpositive,279,20,1,37.28,-0.665,descriptive_only; pre_trigger_data; trigger_close_return; correlated_signals_possible
 market_return_5d_pct,10,positive,0,20,0,,,insufficient_samples
 market_return_5d_pct,10,nonpositive,0,20,0,,,insufficient_samples
 market_return_5d_pct,20,positive,0,20,0,,,insufficient_samples

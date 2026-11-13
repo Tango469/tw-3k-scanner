@@ -9,22 +9,22 @@ institutional_net_5d_ratio,10,positive,0,0,20,0,,,insufficient_sample
 institutional_net_5d_ratio,10,nonpositive,0,0,20,0,,,insufficient_sample
 institutional_net_5d_ratio,20,positive,0,0,20,0,,,insufficient_sample
 institutional_net_5d_ratio,20,nonpositive,0,0,20,0,,,insufficient_sample
-market_advance_ratio,1,positive,1001,1001,20,1,52.15,0.541,descriptive_only; signal-day known factors; next-session decision
+market_advance_ratio,1,positive,1205,1205,20,1,55.27,0.73,descriptive_only; signal-day known factors; next-session decision
 market_advance_ratio,1,nonpositive,0,0,20,0,,,insufficient_sample
-market_advance_ratio,3,positive,256,256,20,1,35.94,-2.012,descriptive_only; signal-day known factors; next-session decision
+market_advance_ratio,3,positive,821,821,20,1,49.45,0.566,descriptive_only; signal-day known factors; next-session decision
 market_advance_ratio,3,nonpositive,0,0,20,0,,,insufficient_sample
-market_advance_ratio,5,positive,212,212,20,1,38.21,-0.413,descriptive_only; signal-day known factors; next-session decision
+market_advance_ratio,5,positive,238,238,20,1,39.92,-0.36,descriptive_only; signal-day known factors; next-session decision
 market_advance_ratio,5,nonpositive,0,0,20,0,,,insufficient_sample
 market_advance_ratio,10,positive,0,0,20,0,,,insufficient_sample
 market_advance_ratio,10,nonpositive,0,0,20,0,,,insufficient_sample
 market_advance_ratio,20,positive,0,0,20,0,,,insufficient_sample
 market_advance_ratio,20,nonpositive,0,0,20,0,,,insufficient_sample
 market_return_5d_pct,1,positive,0,0,20,0,,,insufficient_sample
-market_return_5d_pct,1,nonpositive,1001,1001,20,1,52.15,0.541,descriptive_only; signal-day known factors; next-session decision
+market_return_5d_pct,1,nonpositive,1205,1205,20,1,55.27,0.73,descriptive_only; signal-day known factors; next-session decision
 market_return_5d_pct,3,positive,0,0,20,0,,,insufficient_sample
-market_return_5d_pct,3,nonpositive,256,256,20,1,35.94,-2.012,descriptive_only; signal-day known factors; next-session decision
+market_return_5d_pct,3,nonpositive,821,821,20,1,49.45,0.566,descriptive_only; signal-day known factors; next-session decision
 market_return_5d_pct,5,positive,0,0,20,0,,,insufficient_sample
-market_return_5d_pct,5,nonpositive,212,212,20,1,38.21,-0.413,descriptive_only; signal-day known factors; next-session decision
+market_return_5d_pct,5,nonpositive,238,238,20,1,39.92,-0.36,descriptive_only; signal-day known factors; next-session decision
 market_return_5d_pct,10,positive,0,0,20,0,,,insufficient_sample
 market_return_5d_pct,10,nonpositive,0,0,20,0,,,insufficient_sample
 market_return_5d_pct,20,positive,0,0,20,0,,,insufficient_sample
