@@ -715,6 +715,8 @@ def main(argv=None):
     run_v253_research()
     from v254_institutional import run as run_v254_research
     run_v254_research(rows)
+    from v255_execution import run as run_v255_execution
+    run_v255_execution(rows)
     if errors:
         print('WARNING: partial data failures; see report', file=sys.stderr)
     if all(len({r['date'] for r in rows if r['market'] == m}) < 3 for m in LATEST):
