@@ -78,6 +78,8 @@ def run(rows=None):
     write(ROOT/'docs/v255_performance.csv',report,['horizon','group','samples','mean_net_pct','win_rate_pct','reportable'])
     write(ROOT/'docs/v255_audit.csv',[dict(check=k,value=v) for k,v in sorted(audit.items())],['check','value'])
     diagnostics(out)
+    from v256a_trend import run as run_v256a
+    run_v256a(ROOT)
     print('V2.5.5 execution:',len(events),'events;',len(out),'scenario rows;',dict(audit))
 
 def diagnostics(out):
