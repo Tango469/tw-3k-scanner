@@ -80,6 +80,8 @@ def run(rows=None):
     diagnostics(out)
     from v256a_trend import run as run_v256a
     run_v256a(ROOT)
+    from v256b_risk import run as run_v256b
+    run_v256b(ROOT)
     print('V2.5.5 execution:',len(events),'events;',len(out),'scenario rows;',dict(audit))
 
 def diagnostics(out):
