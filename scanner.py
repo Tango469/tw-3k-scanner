@@ -628,6 +628,25 @@ def main(argv=None):
                 print(errors[-1], file=sys.stderr)
     if not args.skip_latest:
         refresh_twse_current_session(indexed, today, errors)
+    if not args.skip_latest:
+        # Repair recent gaps using dates confirmed by either market; independent of 120-day target.
+        confirmed = sorted({k[0] for k in indexed})[-15:]
+        for market in LATEST:
+            known = {k[0] for k in indexed if k[1] == market}
+            for day_str in confirmed:
+                if day_str in known or day_str > today.isoformat():
+                    continue
+                try:
+                    day = dt.date.fromisoformat(day_str)
+                    records, status = (history_twse(day) if market == 'TWSE' else history_tpex(day))
+                    if status == 'ok' and len(records) >= 100 and all(r['date'] == day_str for r in records):
+                        for r in records:
+                            indexed[(r['date'], r['market'], r['code'])] = r
+                        print(f'HF2 price repair: {market} {day_str}: {len(records)} stocks')
+                    else:
+                        print(f'HF2 price gap unresolved: {market} {day_str}: {status}')
+                except Exception as exc:
+                    errors.append(f'HF2 price gap {market} {day_str}: {exc}')
     # Backfill newest missing weekdays first, retaining only confirmed successful
     # dates. Failed requests are retried on later runs, not marked as done.
     state_path = ROOT/'data'/'backfill_state.json'
