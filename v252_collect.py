@@ -54,7 +54,7 @@ def observation(market,code,factor,value,day,source):
             'observation_date':day,'available_at':available(day),'source':source}
 
 def parse_twse(payload, day):
-    if payload.get('stat')!='OK': return []
+    if payload.get('stat')!='OK' or norm_date(payload.get('date')) != day: return []
     fields=payload.get('fields',[])
     data=payload.get('data',[])
     if not fields or not data: return []
@@ -133,7 +133,7 @@ def parse_tpex(payload,day):
     print(f'V2.5.3 TPEx parse audit: {dict(rejected)}; samples={samples}')
     return out
 
-def market_factors(rows, day):
+def market_factors(rows, day, only_market=None):
     grouped=defaultdict(dict)
     for r in rows:
         market=r.get('market'); code=str(r.get('code',''))
@@ -142,6 +142,7 @@ def market_factors(rows, day):
         if d and d<=day and close and close>0: grouped[(market,code)][d]=close
     result=[]
     for market in ('TWSE','TPEX'):
+        if only_market and market != only_market: continue
         one=[]; five=[]; advancing=0; declining=0
         for (m,code),series in grouped.items():
             if m!=market or day not in series:continue
@@ -170,29 +171,32 @@ def collect(rows):
     days={m:sorted({r['date'] for r in rows if r.get('market')==m}) for m in ('TWSE','TPEX')}
     if not all(days.values()):
         print('V2.5.2: no valid market sessions, skipping');return
-    latest=min(days['TWSE'][-1],days['TPEX'][-1])
-    # No retroactive market lookahead. On first run, backfill TWSE T86 last 5 sessions.
-    observations=market_factors(rows,latest)
-    historical={r.get('observation_date') for r in load_existing() if r.get('factor')=='foreign_net_shares' and r.get('market')=='TWSE'}
-    fetch_days=[d for d in days['TWSE'] if d<=latest][-5:]
-    for d in fetch_days:
-        if d in historical:continue
+    latest = {m: ds[-1] for m, ds in days.items()}
+    existing = load_existing()
+    observations = []
+    components = ('foreign_net_shares','trust_net_shares','dealer_net_shares')
+    counts = Counter((r.get('market'),r.get('observation_date'),r.get('factor')) for r in existing)
+    for m in days:
+        for d in days[m][-15:]:
+            if d == latest[m] or not counts[m,d,'market_return_5d_pct']:
+                observations.extend(market_factors(rows,d,m))
+    for d in days['TWSE'][-20:]:
+        if min(counts['TWSE',d,f] for f in components) >= 100: continue
         try:
-            found=parse_twse(get_json(TWSE_URL.format(d.replace('-',''))),d)
+            found = parse_twse(get_json(TWSE_URL.format(d.replace('-',''))),d)
             observations.extend(found)
-            print(f'V2.5.2 TWSE T86 {d}: {len(found)//3} stocks')
+            print(f'HF2 TWSE institution {d}: {len(found)//3} stocks')
         except Exception as e:
-            print(f'V2.5.2 WARN TWSE T86 {d}: {e}')
+            print(f'HF2 WARN TWSE {d}: {e}')
     try:
-        payload=get_json(TPEX_URL)
-        found=parse_tpex(payload,latest)
-        if not found and isinstance(payload,list) and payload:
-            sample=payload[0]
-            print(f'V2.5.3 TPEx schema diagnostic: rows={len(payload)}; fields={list(sample) if isinstance(sample,dict) else type(sample).__name__}; date_sample={[(k,v) for k,v in sample.items() if any(t in k.lower() for t in ("date","日期","交易日"))][:3] if isinstance(sample,dict) else []}')
-        observations.extend(found)
-        print(f'V2.5.2 TPEx institution {latest}: {len(found)//3} stocks (date-verified)')
+        payload = get_json(TPEX_URL)
+        for d in days['TPEX'][-20:]:
+            if any(isinstance(r,dict) and norm_date(r.get('Date') or r.get('日期')) == d for r in payload):
+                found = parse_tpex(payload,d)
+                observations.extend(found)
+                print(f'HF2 TPEx institution {d}: {len(found)//3} stocks (date-verified)')
     except Exception as e:
-        print(f'V2.5.2 WARN TPEx institution: {e}')
+        print(f'HF2 WARN TPEx: {e}')
     existing=load_existing()
     index={(r.get('market'),r.get('code'),r.get('factor'),r.get('observation_date')):r for r in existing if r.get('market') and r.get('factor')}
     for r in observations:
@@ -201,4 +205,16 @@ def collect(rows):
     with PATH.open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=FIELDS,extrasaction='ignore');w.writeheader();w.writerows(sorted(index.values(),key=lambda r:(r.get('observation_date',''),r.get('market',''),r.get('code',''),r.get('factor',''))))
     print(f'V2.5.2 observations: added_or_updated={len(observations)}, cumulative={len(index)}; asof={latest}')
+    counts = Counter((r['market'],r['observation_date'],r['factor']) for r in index.values())
+    prices = Counter((r['market'],r['date']) for r in rows)
+    audit = ROOT/'docs'/'v256b_hf2_data_quality.csv'
+    audit.parent.mkdir(parents=True,exist_ok=True)
+    with audit.open('w',encoding='utf-8-sig',newline='') as f:
+        w=csv.writer(f); w.writerow(['market','date','price_rows','foreign_rows','trust_rows','dealer_rows','status'])
+        for d in sorted(set(days['TWSE']) | set(days['TPEX']))[-20:]:
+            for m in days:
+                n=[counts[m,d,k] for k in components]
+                status='price_missing' if not prices[m,d] else 'institution_missing_or_low_coverage' if min(n)<100 else 'present_not_full_verified'
+                w.writerow([m,d,prices[m,d],*n,status])
+    print(f'HF2 latest_by_market={latest}; audit={audit.name}')
     return len(observations)
