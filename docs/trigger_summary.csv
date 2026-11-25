@@ -1,4 +1,4 @@
 ﻿type,signals,complete_20bar,triggered_within_20,trigger_rate_pct,ambiguous,failed_before_trigger
-A,5392,1301,470,36.13,34,797
-B,5082,1224,352,28.76,49,823
-ALL,10474,2525,822,32.55,83,1620
+A,6058,1880,640,34.04,46,1194
+B,5303,1794,464,25.86,64,1266
+ALL,11361,3674,1104,30.05,110,2460
