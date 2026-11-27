@@ -1,6 +1,4 @@
 ﻿market,date,price_rows,foreign_rows,trust_rows,dealer_rows,status
-TWSE,2026-10-30,1087,1079,1079,1079,present_not_full_verified
-TPEX,2026-10-30,874,796,796,796,present_not_full_verified
 TWSE,2026-11-02,1089,1079,1079,1079,present_not_full_verified
 TPEX,2026-11-02,861,763,763,763,present_not_full_verified
 TWSE,2026-11-03,1086,1080,1080,1080,present_not_full_verified
@@ -39,3 +37,5 @@ TWSE,2026-11-25,1090,1085,1085,1085,present_not_full_verified
 TPEX,2026-11-25,866,781,781,781,present_not_full_verified
 TWSE,2026-11-26,1091,1085,1085,1085,present_not_full_verified
 TPEX,2026-11-26,880,773,773,773,present_not_full_verified
+TWSE,2026-11-27,1091,1086,1086,1086,present_not_full_verified
+TPEX,2026-11-27,862,755,755,755,present_not_full_verified
